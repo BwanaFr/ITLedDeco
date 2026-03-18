@@ -1,0 +1,14 @@
+.pio
+.vscode/.browse.c_cpp.db*
+.vscode/c_cpp_properties.json
+.vscode/launch.json
+.vscode/ipch
+.vscode/settings.json
+hardware/PCB/esp32-ups-snmp/esp32-ups-snmp-backups/*.zip
+*logo*.hpp
+*DS_Store*
+*.FCBak
+*jlcpcb*
+include/Customization.hpp
+src/GitVersion.cpp
+*.ps1
