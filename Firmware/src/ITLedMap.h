@@ -17,7 +17,7 @@
 #include "FastLED.h"
 
 #define LETTER_WIDTH 15
-#define LETTER_HEIGHT 15
+#define LETTER_HEIGHT 20
 #define NO_LED 0xffff
 
 //2D screen dimension

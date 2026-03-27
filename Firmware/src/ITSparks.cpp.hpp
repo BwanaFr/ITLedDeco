@@ -14,17 +14,14 @@ void ITSparks::draw(fl::Fx::DrawContext context)
     if((context.now - lastGen_) >= rate_){
         for(int i=0;i<nbSparks_;++i){
             fl::u16 index = random(NB_STRIP_LEDS);
-            fl::u16 x = 0;
-            fl::u16 y = 0;
-            IT::toXY(index, x, y);
-            context.leds[mXyMap(x,y)] = CRGB::White;
-            context.leds[mXyMap(x,y)].fadeLightBy(random(64));
-            // blur2d(context.leds, getWidth(), getHeight(), BLUR_AMOUNT, getXYMap());
+            context.leds[index] = CRGB::White;
+            context.leds[index].fadeLightBy(random(64));
+            blur2d(context.leds, getWidth(), getHeight(), BLUR_AMOUNT, getXYMap());
         }
         lastGen_ = context.now;
     }
-    fadeToBlackBy(context.leds, mNumLeds, 20);
-    for(int i=0;i<mNumLeds;++i){
+    fadeToBlackBy(context.leds, NB_STRIP_LEDS, 20);
+    for(int i=0;i<NB_STRIP_LEDS;++i){
         context.leds[i].addToRGB(8);
     }
 }
