@@ -16,13 +16,13 @@
 
 #include "FastLED.h"
 
-#define LETTER_WIDTH 15
-#define LETTER_HEIGHT 20
+#define LETTER_WIDTH 20
+#define LETTER_HEIGHT 25
 #define NO_LED 0xffff
 
 //2D screen dimension
 #define SCREEN_WIDTH 2*LETTER_WIDTH
-#define SCREEN_HEIGHT LETTER_HEIGHT + 2
+#define SCREEN_HEIGHT (LETTER_HEIGHT + 2)
 
 #define NB_STRIP_LEDS 3*LETTER_WIDTH + 2*LETTER_HEIGHT
 
@@ -34,4 +34,4 @@ public:
     static void toXY(fl::u16 index, fl::u16& x, fl::u16& y);
 };
 
-#include "ITLedMap.cpp.hpp"
+// #include "ITLedMap.cpp.hpp"
