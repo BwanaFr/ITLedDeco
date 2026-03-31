@@ -19,4 +19,4 @@ private:
     fl::u16 height_;
 };
 
-// #include "ITFill.cpp.hpp"
+#include "ITFill.cpp.hpp"

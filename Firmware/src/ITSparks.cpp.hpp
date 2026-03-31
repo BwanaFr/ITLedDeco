@@ -1,3 +1,4 @@
+#pragma once
 #include <FastLED.h>
 #include "ITSparks.h"
 #include "ITLedMap.h"
@@ -20,7 +21,7 @@ void ITSparks::draw(fl::Fx::DrawContext context)
         }
         lastGen_ = context.now;
     }
-    fadeToBlackBy(context.leds, NB_STRIP_LEDS, 20);
+    fadeToBlackBy(context.leds, 20);
     for(int i=0;i<NB_STRIP_LEDS;++i){
         context.leds[i].addToRGB(8);
     }
