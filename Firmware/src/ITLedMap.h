@@ -8,7 +8,7 @@
  *      x                  x
  *      x                  x
  *      C                  G
- * AxxxxxxxxxxB
+ * BxxxxxxxxxxA
  *
  * Where B-A == F-E == J-I  (called LETTER_WIDTH)
  * and D-C == H-G           (called LETTER_HEIGHT)

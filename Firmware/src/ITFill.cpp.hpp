@@ -6,15 +6,14 @@
 
 #define BLUR_AMOUNT 2
 
-ITFill::ITFill(const fl::XYMap &xymap) : fl::Fx2d(xymap), rate_{10}, lastGen_{0}, level_{0}
+ITFill::ITFill(const fl::XYMap &xymap) : fl::Fx2d(xymap), rate_{20}, lastGen_{0}, level_{0}, fadeRate_{15}, currentPalette_{PartyColors_p}
 {
-    width_ = xymap.getWidth();
-    height_ = xymap.getHeight();
 }
 
 
 void ITFill::draw(fl::Fx::DrawContext context)
 {
+    fadeToBlackBy(context.leds, fadeRate_);
     if((context.now - lastGen_) >= rate_){
         lastGen_ = context.now;
         //Orr use map_range_clamped
@@ -22,25 +21,95 @@ void ITFill::draw(fl::Fx::DrawContext context)
         int count = getHeight() - middle;
         int stopTop = middle + ((count + 1)*level_)/255;
         int stopBot = middle - ((count + 1)*level_)/255;
-        for(int x=0;x<getWidth();++x){
-            for(int y=middle;y<stopTop;++y){
-                int index = getXYMap()(x,y);
-                // if(index != NO_LED){
-                    context.leds[index] = ColorFromPalette(PartyColors_p, map(y+1, middle, getHeight(), 0, 255));
-                // }
+        for(int y=middle;y<stopTop;++y){
+            CRGB color = ColorFromPalette(currentPalette_, map(y+1, middle, getHeight(), 0, 255));
+            for(int x=0;x<getWidth();++x){
+                fl::u16 index = getXYMap()(x,y);
+                context.leds[index] = color;
             }
-            for(int y=middle;y>stopBot;--y){
-                int index = getXYMap()(x,y);
-                // if(index != NO_LED){
-                    context.leds[index] = ColorFromPalette(PartyColors_p, map(middle-y, 0, middle, 0, 255));
-                // }
+        }
+
+        for(int y=middle;y>stopBot;--y){
+            CRGB color = ColorFromPalette(currentPalette_, map(y+1, middle, getHeight(), 0, 255));
+            for(int x=0;x<getWidth();++x){
+                fl::u16 index = getXYMap()(x,y);
+                context.leds[index] = color;
             }
         }
     }
-    fadeToBlackBy(context.leds, 15);
 }
 
 fl::string ITFill::fxName() const
 {
     return "ITFill";
+}
+
+void ITFill::setLevel(fl::u8 level)
+{
+    if(level_ != level){
+        level_ = level;
+        lastGen_ = 0;
+    }
+}
+
+void ITFill::setRandomPalette()
+{
+    setPalette(random16());
+}
+
+void ITFill::setPalette(int index)
+{
+    int palIndex = index % MAX_PALETTE; // Ensure the index wraps around
+    switch (palIndex) {
+    case 0:
+        currentPalette_ = RainbowColors_p;
+        // Serial.println("Rainbow");
+        break;
+    case 1:
+        SetupPurpleAndGreenPalette();
+        // Serial.println("PurpleAndGreen");
+        break;
+    case 2:
+        SetupGrayAndWhiteStripedPalette();
+        // Serial.println("GrayAndWhite");
+        break;
+    case 3:
+        currentPalette_ = ForestColors_p;
+        // Serial.println("ForestColors_p");
+        break;
+    case 4:
+        currentPalette_ = CloudColors_p;
+        // Serial.println("CloudColors_p");
+        break;
+    case 5:
+        currentPalette_ = LavaColors_p;
+        // Serial.println("LavaColors_p");
+        break;
+    case 6:
+        currentPalette_ = OceanColors_p;
+        // Serial.println("OceanColors_p");
+        break;
+    case 7:
+        currentPalette_ = PartyColors_p;
+        // Serial.println("PartyColors_p");
+        break;
+    }
+}
+
+void ITFill::SetupGrayAndWhiteStripedPalette() {
+    fill_solid(currentPalette_, 16, CRGB::Gray50);
+    currentPalette_[0] = CRGB::White;
+    currentPalette_[4] = CRGB::White;
+    currentPalette_[8] = CRGB::White;
+    currentPalette_[12] = CRGB::White;
+}
+
+void ITFill::SetupPurpleAndGreenPalette() {
+    CRGB purple = CHSV(HUE_PURPLE, 255, 255);
+    CRGB green = CHSV(HUE_GREEN, 255, 255);
+    CRGB yellow = CHSV(HUE_YELLOW, 255, 255);
+
+    currentPalette_ = CRGBPalette16(
+        green, green, yellow, yellow, purple, purple, yellow, yellow, green,
+        green, yellow, yellow, purple, purple, yellow, yellow);
 }
