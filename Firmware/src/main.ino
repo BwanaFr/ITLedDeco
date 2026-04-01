@@ -53,7 +53,11 @@ fl::audio::Reactive audioReactive;
 
 static const char* TAG = "Main";
 
+#ifdef __EMSCRIPTEN__
 CRGB leds[SCREEN_WIDTH * SCREEN_HEIGHT];
+#else
+CRGB leds[NB_STRIP_LEDS + 1];
+#endif
 
 XYMap xymap = XYMap::constructWithUserFunction(SCREEN_WIDTH, SCREEN_HEIGHT, IT::itUserMapFunc);
 
@@ -73,10 +77,10 @@ void setup()
         .setScreenMap(xymap);
 #else
     const int iCount = 2*LETTER_WIDTH + LETTER_HEIGHT;
-    FastLED.addLeds<WS2812B, DATA_PIN_I, GRB>(leds + 1, iCount)
+    FastLED.addLeds<WS2812B, DATA_PIN_I, GRB>(leds, 1, iCount)
         .setCorrection(LEDColorCorrection::TypicalLEDStrip)
         .setScreenMap(xymap);
-    FastLED.addLeds<WS2812B, DATA_PIN_T, GRB>(leds + iCount + 1, (LETTER_HEIGHT + LETTER_WIDTH))
+    FastLED.addLeds<WS2812B, DATA_PIN_T, GRB>(leds, iCount + 1, (LETTER_HEIGHT + LETTER_WIDTH))
         .setCorrection(LEDColorCorrection::TypicalLEDStrip)
       .setScreenMap(xymap);
 #endif
@@ -123,27 +127,38 @@ fl::u32 lastSpawnTime = 0;
 void loop()
 {
     //Get audio samples
-    fl::audio::Sample sample = audioSource->read();
-    audioReactive.processSample(sample);
+    if(audioSource){
+        fl::audio::Sample sample = audioSource->read();
+        audioReactive.processSample(sample);
+    }else{
+        Serial.println("No audio source!");
+    }
 
     // fl::u32 now = fl::millis();
     // if((now - lastSpawnTime) > 1000){
     //     particles.spawnRandomParticle();
     // }
     // EVERY_N_MILLISECONDS(100) { Serial.println("Hello world!"); }
-    // itFill.draw(fl::Fx::DrawContext(fl::millis(), leds));
     // particles.draw(fl::Fx::DrawContext(fl::millis(), leds));
     // noisePalette.setSpeed(5);
     // noisePalette.setScale(5);
     EVERY_N_MILLISECONDS(10000) { noisePalette.changeToRandomPalette();
-            particles.spawnRandomParticle();
-        }
-    EVERY_N_MILLISECONDS(100) { itFill.setLevel(level += 15); }
+        particles.spawnRandomParticle();
+    }
+    uint32_t level = audioReactive.getBassEnergy()*40;
+    if(level > 255){
+        level = 255;
+    }
+    EVERY_N_MILLISECONDS(100) { Serial.printf("%f\n", audioReactive.getBassEnergy()); }
+    itFill.setLevel(level);
     // noisePalette.draw(fl::Fx::DrawContext(fl::millis(), leds));
     // FastLED.showColor(CRGB::BlueViolet);
-    EVERY_N_SECONDS(5) {
-        fxEngine.nextFx(500);
-    }
-    fxEngine.draw(fl::millis(), leds);
+    // EVERY_N_SECONDS(5) {
+        //     fxEngine.nextFx(500);
+        //     Serial.println("Next FX");
+        // }
+        // fxEngine.draw(fl::millis(), leds);
+    itFill.draw(fl::Fx::DrawContext(fl::millis(), leds));
+    // leds[1] = CRGB::Purple;
     FastLED.show();
 }
