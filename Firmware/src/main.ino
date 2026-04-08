@@ -23,6 +23,7 @@
 #include "fl/fx/fx_engine.h"
 #include "fl/fx/1d/particles.h"
 #include "fl/fx/2d/noisepalette.h"
+#include "fl/audio/auto_gain.h"
 #include "fl/audio/audio_reactive.h"
 
 #include "ITSparks.h"
@@ -30,12 +31,6 @@
 #include "ITParticles.h"
 
 using namespace fl;
-
-//Audio objects
-// Global audio source (initialized in setup)
-fl::shared_ptr<fl::audio::IInput> audioSource;
-//Audio reactive
-fl::audio::Reactive audioReactive;
 
 
 //Flag to know if we are in simulation mode
@@ -56,6 +51,17 @@ fl::audio::Reactive audioReactive;
 #define I2S_CHANNEL fl::audio::AudioChannel::Left
 
 static const char* TAG = "Main";
+
+//Audio objects
+// Global audio source (initialized in setup)
+fl::shared_ptr<fl::audio::IInput> audioSource;
+
+//Signal conditionner
+fl::audio::SignalConditioner sConditioner;
+//AutoGain
+fl::audio::AutoGain autoGain;
+//Audio reactive
+fl::audio::Reactive audioReactive;
 
 CRGB onBoardLed;
 
@@ -85,9 +91,15 @@ void fastLedTask(void* param){
     bool btnUsed = false;
 
     while(true){
+        fl::audio::Sample sample;
         //Get audio samples
         if(audioSource){
-            fl::audio::Sample sample = audioSource->read();
+            sample = audioSource->read();
+            //Conditionner
+            sample = sConditioner.processSample(sample);
+            //Autogain
+            sample = autoGain.process(sample);
+            //Audio reactive
             audioReactive.processSample(sample);
         }
 
@@ -100,11 +112,7 @@ void fastLedTask(void* param){
             ITVuMeter.setRandomPalette();
         }
         float be = audioReactive.getBassEnergy();
-        if(be > bassEnergy){
-            bassEnergy = be;
-            Serial.printf("New BE : %f\n", be);
-        }
-        fl::u8 level = static_cast<fl::u8>(fl::map_range_clamped(be, 0.0f, 40.0f, 0, 255));
+        fl::u8 level = static_cast<fl::u8>(fl::map_range_clamped(be, 0.0f, 1000.0f, 0, 255));
         ITVuMeter.setLevel(level);
 
         bool btnState = ::digitalRead(BTN_PIN);
@@ -125,14 +133,32 @@ void fastLedTask(void* param){
         }
 
         if(audioReactive.isBeat()){
-            onBoardLed = CRGB::White;
-        }else if(audioReactive.getSmoothedData().bassEnergy > (bassEnergy/2.0)){
-            itParticles.spawnRandomParticle();
-            float bass = audioReactive.getBass();
+            if(audioReactive.isBassBeat()){
+                Serial.printf("B\n");
+            }else if(audioReactive.isMidBeat()){
+                Serial.printf("M\n");
+            }else if(audioReactive.isTrebleBeat()){
+                Serial.printf("T\n");
+            }else if(audioReactive.isKick()){
+                Serial.printf("K\n");
+            }else if(audioReactive.isSnare()){
+                Serial.printf("S\n");
+            }else if(audioReactive.isHiHat()){
+                Serial.printf("H\n");
+            }else if(audioReactive.isTom()){
+                Serial.printf("Tom\n");
+            }
+
+            // if(audioReactive.isKick()){?
+                onBoardLed = CRGB::White;
+                itParticles.spawnRandomParticle();
+            // }
+        /*}else if(audioReactive.getSmoothedData().bassEnergy > (bassEnergy/2.0)){*/
+            /*float bass = audioReactive.getBass();
             bass = (bass < 0.0f) ? 0.0f : ((bass > 255.0f) ? 255.0f : bass);
-            onBoardLed = ColorFromPalette(RainbowColors_p, static_cast<fl::u8>(bass));
+            onBoardLed = ColorFromPalette(RainbowColors_p, static_cast<fl::u8>(bass));*/
         }else{
-            onBoardLed.fadeToBlackBy(10);
+            onBoardLed.fadeToBlackBy(50);
         }
 
         FastLED.show();
@@ -182,23 +208,38 @@ void setup()
         Serial.println(errorMsg.c_str());
         return;
     }
-    // audioSource->setGain(2.0);
+    audioSource->setGain(2.0);
     // Start audio capture
     Serial.println("Starting audio capture...");
     audioSource->start();
 
+    //Configure signal conditionner
+    fl::audio::SignalConditionerConfig scConfig;
+    // scConfig.enableDCRemoval = config.enableSignalConditioning;
+    // scConfig.enableSpikeFilter = config.enableSignalConditioning;
+    // scConfig.enableNoiseGate = config.noiseGate && config.enableSignalConditioning;
+    sConditioner.configure(scConfig);
+    sConditioner.reset();
+
+    //Configure AutoGain
+    fl::audio::AutoGainConfig agcConfig;
+    agcConfig.preset = fl::audio::AGCPreset::AGCPreset_Lazy;
+    autoGain.configure(agcConfig);
+    autoGain.reset();
+
     //Configure audio reactive
     fl::audio::ReactiveConfig reactConfig;
     // Enable signal conditioning (DC removal, spike filter, noise gate)
-    reactConfig.enableSignalConditioning = true;
+    reactConfig.enableSignalConditioning = false;
     // Enable advanced beat tracking with BPM
-    reactConfig.enableMusicalBeatDetection = true;
+    reactConfig.enableMusicalBeatDetection = false;
     // Enable noise floor tracking
-    reactConfig.enableNoiseFloorTracking = true;
+    reactConfig.enableNoiseFloorTracking = false;
     //Enable per-band beat detection
     reactConfig.enableMultiBandBeats = true;
 
-    reactConfig.gain = 255;
+    reactConfig.enableMultiBand = false;
+
     audioReactive.begin(reactConfig);
 
     xTaskCreate(fastLedTask, "FastLed", 16*1024, nullptr, 1, NULL);
