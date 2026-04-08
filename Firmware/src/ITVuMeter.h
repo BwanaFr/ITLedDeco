@@ -4,9 +4,9 @@
 
 
 
-class ITFill : public fl::Fx2d {
+class ITVuMeter : public fl::Fx2d {
 public:
-    ITFill(const fl::XYMap &xymap);
+    ITVuMeter(const fl::XYMap &xymap);
     inline void setRate(const fl::u16 rate) { rate_ = rate; }
     inline void setFadeRate(const fl::u8 rate) { fadeRate_ = rate; }
     void draw(fl::Fx::DrawContext context) override;
@@ -27,4 +27,4 @@ private:
     void SetupPurpleAndGreenPalette();
 };
 
-#include "ITFill.cpp.hpp"
+#include "ITVuMeter.cpp.hpp"

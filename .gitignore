@@ -5,3 +5,4 @@ Firmware/**/.vscode/launch.json
 Firmware/**/.vscode/ipch
 Firmware/**/.vscode/settings.json
 *DS_Store*
+**/*.FCBak

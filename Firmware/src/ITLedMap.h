@@ -18,13 +18,14 @@
 
 #define LETTER_WIDTH 20
 #define LETTER_HEIGHT 25
-#define NO_LED 0x0
 
 //2D screen dimension
 #define SCREEN_WIDTH 2*LETTER_WIDTH
 #define SCREEN_HEIGHT (LETTER_HEIGHT + 2)
 
-#define NB_STRIP_LEDS 3*LETTER_WIDTH + 2*LETTER_HEIGHT
+#define NB_STRIP_LEDS ((3*LETTER_WIDTH) + (2*LETTER_HEIGHT))
+
+#define NO_LED NB_STRIP_LEDS
 
 class IT{
 public:

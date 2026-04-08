@@ -1,17 +1,17 @@
 #pragma once
 #include <FastLED.h>
-#include "ITFill.h"
+#include "ITVuMeter.h"
 #include "ITLedMap.h"
 #include <Arduino.h>
 
 #define BLUR_AMOUNT 2
 
-ITFill::ITFill(const fl::XYMap &xymap) : fl::Fx2d(xymap), rate_{20}, lastGen_{0}, level_{0}, fadeRate_{15}, currentPalette_{PartyColors_p}
+ITVuMeter::ITVuMeter(const fl::XYMap &xymap) : fl::Fx2d(xymap), rate_{20}, lastGen_{0}, level_{0}, fadeRate_{15}, currentPalette_{PartyColors_p}
 {
 }
 
 
-void ITFill::draw(fl::Fx::DrawContext context)
+void ITVuMeter::draw(fl::Fx::DrawContext context)
 {
     fadeToBlackBy(context.leds, fadeRate_);
     if((context.now - lastGen_) >= rate_){
@@ -39,12 +39,12 @@ void ITFill::draw(fl::Fx::DrawContext context)
     }
 }
 
-fl::string ITFill::fxName() const
+fl::string ITVuMeter::fxName() const
 {
-    return "ITFill";
+    return "ITVuMeter";
 }
 
-void ITFill::setLevel(fl::u8 level)
+void ITVuMeter::setLevel(fl::u8 level)
 {
     if(level_ != level){
         level_ = level;
@@ -52,12 +52,12 @@ void ITFill::setLevel(fl::u8 level)
     }
 }
 
-void ITFill::setRandomPalette()
+void ITVuMeter::setRandomPalette()
 {
     setPalette(random16());
 }
 
-void ITFill::setPalette(int index)
+void ITVuMeter::setPalette(int index)
 {
     int palIndex = index % MAX_PALETTE; // Ensure the index wraps around
     switch (palIndex) {
@@ -96,7 +96,7 @@ void ITFill::setPalette(int index)
     }
 }
 
-void ITFill::SetupGrayAndWhiteStripedPalette() {
+void ITVuMeter::SetupGrayAndWhiteStripedPalette() {
     fill_solid(currentPalette_, 16, CRGB::Gray50);
     currentPalette_[0] = CRGB::White;
     currentPalette_[4] = CRGB::White;
@@ -104,7 +104,7 @@ void ITFill::SetupGrayAndWhiteStripedPalette() {
     currentPalette_[12] = CRGB::White;
 }
 
-void ITFill::SetupPurpleAndGreenPalette() {
+void ITVuMeter::SetupPurpleAndGreenPalette() {
     CRGB purple = CHSV(HUE_PURPLE, 255, 255);
     CRGB green = CHSV(HUE_GREEN, 255, 255);
     CRGB yellow = CHSV(HUE_YELLOW, 255, 255);

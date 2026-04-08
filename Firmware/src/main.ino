@@ -26,7 +26,7 @@
 #include "fl/audio/audio_reactive.h"
 
 #include "ITSparks.h"
-#include "ITFill.h"
+#include "ITVuMeter.h"
 #include "ITParticles.h"
 
 using namespace fl;
@@ -45,6 +45,7 @@ fl::audio::Reactive audioReactive;
 
 #define DATA_PIN_I 45
 #define DATA_PIN_T 46
+#define DATA_PIN_ONBOARD 33
 
 #define BTN_PIN 38
 
@@ -55,6 +56,8 @@ fl::audio::Reactive audioReactive;
 #define I2S_CHANNEL fl::audio::AudioChannel::Left
 
 static const char* TAG = "Main";
+
+CRGB onBoardLed;
 
 // #ifdef __EMSCRIPTEN__
 CRGB leds[SCREEN_WIDTH * SCREEN_HEIGHT + 1];
@@ -67,9 +70,74 @@ XYMap xymap = XYMap::constructWithUserFunction(SCREEN_WIDTH, SCREEN_HEIGHT, IT::
 ITSparks sparks(xymap);
 fl::Particles1d particles(NB_STRIP_LEDS + 1, 2, 2);
 fl::NoisePalette noisePalette(xymap);
-ITFill itFill(xymap);
+ITVuMeter ITVuMeter(xymap);
 ITParticles itParticles(NB_STRIP_LEDS + 1);
-fl::FxEngine fxEngine(SCREEN_WIDTH * SCREEN_HEIGHT);
+fl::FxEngine fxEngine(SCREEN_WIDTH * SCREEN_HEIGHT, false); //08/04/28 : Activating interpolation results in heap crashes
+
+/**
+ * Runs in a FreeRTOS task to avoid stack overflow
+ */
+void fastLedTask(void* param){
+    fl::u8 level = 0;
+    fl::u32 lastFxSwitchTime = 0;
+    float bassEnergy = 0.0f;
+    bool lastBtn = true;
+    bool btnUsed = false;
+
+    while(true){
+        //Get audio samples
+        if(audioSource){
+            fl::audio::Sample sample = audioSource->read();
+            audioReactive.processSample(sample);
+        }
+
+        EVERY_N_MILLISECONDS(200) {
+            particles.spawnRandomParticle();
+        }
+
+        EVERY_N_MILLISECONDS(10000) {
+            noisePalette.changeToRandomPalette();
+            ITVuMeter.setRandomPalette();
+        }
+        float be = audioReactive.getBassEnergy();
+        if(be > bassEnergy){
+            bassEnergy = be;
+            Serial.printf("New BE : %f\n", be);
+        }
+        fl::u8 level = static_cast<fl::u8>(fl::map_range_clamped(be, 0.0f, 40.0f, 0, 255));
+        ITVuMeter.setLevel(level);
+
+        bool btnState = ::digitalRead(BTN_PIN);
+        if(!btnState && (btnState != lastBtn)){
+            lastFxSwitchTime = ::millis();
+            fxEngine.nextFx(50);
+            btnUsed = true;
+            Serial.printf("Press : Next FX -> %s\n", fxEngine.getFx(fxEngine.getCurrentFxId())->fxName().c_str());
+        }
+        lastBtn = btnState;
+
+        fxEngine.draw(fl::millis(), leds);
+
+        if(!btnUsed && ((::millis() - lastFxSwitchTime) >= 10000)){
+            lastFxSwitchTime = ::millis();
+            fxEngine.nextFx(500);
+            Serial.printf("Next FX -> %s\n", fxEngine.getFx(fxEngine.getCurrentFxId())->fxName().c_str());
+        }
+
+        if(audioReactive.isBeat()){
+            onBoardLed = CRGB::White;
+        }else if(audioReactive.getSmoothedData().bassEnergy > (bassEnergy/2.0)){
+            itParticles.spawnRandomParticle();
+            float bass = audioReactive.getBass();
+            bass = (bass < 0.0f) ? 0.0f : ((bass > 255.0f) ? 255.0f : bass);
+            onBoardLed = ColorFromPalette(RainbowColors_p, static_cast<fl::u8>(bass));
+        }else{
+            onBoardLed.fadeToBlackBy(10);
+        }
+
+        FastLED.show();
+    }
+}
 
 void setup()
 {
@@ -85,16 +153,18 @@ void setup()
         .setScreenMap(xymap);
 #else
     const int iCount = 2*LETTER_WIDTH + LETTER_HEIGHT;
-    FastLED.addLeds<WS2812B, DATA_PIN_I, GRB>(leds, 1, iCount)
+    FastLED.addLeds<WS2812B, DATA_PIN_I, GRB>(leds, 0, iCount)
         .setCorrection(LEDColorCorrection::TypicalLEDStrip);
-    FastLED.addLeds<WS2812B, DATA_PIN_T, GRB>(leds, iCount + 1, (LETTER_HEIGHT + LETTER_WIDTH))
+    FastLED.addLeds<WS2812B, DATA_PIN_T, GRB>(leds, iCount, (LETTER_HEIGHT + LETTER_WIDTH))
         .setCorrection(LEDColorCorrection::TypicalLEDStrip);
+    //Internal led to show beat detection
+    FastLED.addLeds<SK6812, DATA_PIN_ONBOARD, GRB>(&onBoardLed, 1);
 #endif
-    // FastLED.setBrightness(64);
+    FastLED.setBrightness(64);
     fxEngine.addFx(sparks);
     fxEngine.addFx(particles);
     fxEngine.addFx(noisePalette);
-    fxEngine.addFx(itFill);
+    fxEngine.addFx(ITVuMeter);
     fxEngine.addFx(itParticles);
 
     //Enable audio
@@ -112,7 +182,7 @@ void setup()
         Serial.println(errorMsg.c_str());
         return;
     }
-    // audioSource->setGain(10.0);
+    // audioSource->setGain(2.0);
     // Start audio capture
     Serial.println("Starting audio capture...");
     audioSource->start();
@@ -127,58 +197,15 @@ void setup()
     reactConfig.enableNoiseFloorTracking = true;
     //Enable per-band beat detection
     reactConfig.enableMultiBandBeats = true;
+
+    reactConfig.gain = 255;
     audioReactive.begin(reactConfig);
 
+    xTaskCreate(fastLedTask, "FastLed", 16*1024, nullptr, 1, NULL);
 }
 
-fl::u8 level = 0;
-fl::u32 lastFxSwitchTime = 0;
-float bassEnergy = 0.0f;
-bool lastBtn = true;
+
 void loop()
 {
-    //Get audio samples
-    if(audioSource){
-        fl::audio::Sample sample = audioSource->read();
-        audioReactive.processSample(sample);
-    }
-
-    EVERY_N_MILLISECONDS(200) {
-        particles.spawnRandomParticle();
-        itParticles.spawnRandomParticle();
-    }
-
-    EVERY_N_MILLISECONDS(10000) {
-        noisePalette.changeToRandomPalette();
-        itFill.setRandomPalette();
-    }
-    float be = audioReactive.getBassEnergy();
-    if(be > bassEnergy){
-        bassEnergy = be;
-        Serial.printf("New BE : %f\n", be);
-    }
-    fl::u8 level = static_cast<fl::u8>(fl::map_range_clamped(be, 0.0f, 40.0f, 0, 255));
-    itFill.setLevel(level);
-
-    bool btnState = ::digitalRead(BTN_PIN);
-    if(!btnState && (btnState != lastBtn)){
-        lastFxSwitchTime = ::millis();
-        fxEngine.nextFx(50);
-        Serial.printf("Press : Next FX -> %s\n", fxEngine.getFx(fxEngine.getCurrentFxId())->fxName().c_str());
-    }
-    lastBtn = btnState;
-
-    if((::millis() - lastFxSwitchTime) >= 10000){
-        lastFxSwitchTime = ::millis();
-        fxEngine.nextFx(500);
-        Serial.printf("Next FX -> %s\n", fxEngine.getFx(fxEngine.getCurrentFxId())->fxName().c_str());
-    }
-    fxEngine.draw(fl::millis(), leds);
-    // itFill.draw(fl::Fx::DrawContext(fl::millis(), leds));
-    if(audioReactive.isBassBeat()){
-        leds[1] = CRGB::White;
-    }else{
-        leds[1] = CRGB::Black;
-    }
-    FastLED.show();
+    vTaskDelete(NULL);
 }

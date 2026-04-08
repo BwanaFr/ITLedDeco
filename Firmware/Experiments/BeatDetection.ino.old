@@ -79,7 +79,7 @@ void setup() {
     // Initialize LED strip with screen map for visualization
     fl::ScreenMap screenMap = fl::ScreenMap::DefaultStrip(NUM_LEDS, 1.5f, 0.5f);
     FastLED.addLeds<SK6812, DATA_PIN, GRB>(leds, NUM_LEDS)
-        .setScreenMap(screenMap);
+        .setScreenMap(screenMap);1
     FastLED.setBrightness(BRIGHTNESS);
     FastLED.clear();
     FastLED.show();

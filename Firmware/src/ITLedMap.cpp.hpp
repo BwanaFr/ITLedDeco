@@ -2,7 +2,7 @@
 
 fl::u16 IT::itUserMapFunc(fl::u16 x, fl::u16 y, fl::u16 width, fl::u16 height)
 {
-    fl::u16 ret = 0xFFFF;
+    fl::u16 ret = NO_LED;
     if (y == 0) {
         if (x < LETTER_WIDTH) {
             // Bottom of the I
@@ -24,10 +24,8 @@ fl::u16 IT::itUserMapFunc(fl::u16 x, fl::u16 y, fl::u16 width, fl::u16 height)
             ret =  LETTER_WIDTH * 2 + LETTER_HEIGHT + y - 1;
         }
     }
-    if(ret != 0xFFFF){
-        ++ret;
-    }else{
-        ret = 0;
+    if(ret > NO_LED){
+        ret = NO_LED;
     }
     return ret;
 }
