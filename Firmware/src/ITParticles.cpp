@@ -1,6 +1,5 @@
-#pragma once
-#include <ITParticles.h>
-#include <ITLedMap.h>
+#include <ITParticles.hpp>
+#include <ITLedMap.hpp>
 
 ITParticles::ITParticles(fl::u16 num_leds, fl::u8 max_particles, fl::u8 fade_rate) : Fx1d(num_leds),
             subStrips_{fl::Particles1d(LETTER_WIDTH, max_particles, fade_rate), fl::Particles1d(LETTER_HEIGHT, max_particles, fade_rate),

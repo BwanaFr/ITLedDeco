@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <style type="text/css">
+        .form-control::placeholder{opacity:0.4}
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid pb-5">
+        <div class="row">
+            <div class="col-md-12">
+                <form id="cfgForm" class="needs-validation was-validated" novalidate>
+                    <fieldset>
+                        <legend class="mt-2">WiFi AP settings</legend>
+                        <div class="row mb-3 align-self-center">
+                            <label for="apSSID" class="col-sm-1 col-form-label">SSID</label>
+                            <div class="col-sm-3">
+                                <input id="apSSID"
+                                    name="apSSID" class="form-control" type="text" pattern=".{1,32}|^$"
+                                    placeholder="Server AP SSID (empty to disable)">
+                                <div class="invalid-feedback">
+                                    Please provide a valid value.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3 align-self-center">
+                            <label for="apPass" class="col-sm-1 col-form-label">Passphrase</label>
+                            <div class="col-sm-3">
+                                <input id="apPass"
+                                    name="apPass" class="form-control" type="password" pattern=".{8,63}|^$"
+                                    placeholder="Server AP passphrase" onchange="this.setAttribute('data-changed', true);">
+                                <div class="invalid-feedback">
+                                    Please provide a valid value.
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend class="mt-2">WiFi client settings</legend>
+                        <div class="row mb-3 align-self-center">
+                            <label for="staSSID" class="col-sm-1 col-form-label">SSID</label>
+                            <div class="col-sm-3">
+                                <input id="staSSID"
+                                    name="staSSID" class="form-control" type="text" pattern=".{1,32}"
+                                    placeholder="Client AP SSID">
+                                <div class="invalid-feedback">
+                                    Please provide a valid value.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3 align-self-center">
+                            <label for="staPass" class="col-sm-1 col-form-label">Passphrase</label>
+                            <div class="col-sm-3">
+                                <input id="staPass"
+                                    name="staPass" class="form-control" type="password" pattern=".{8,63}|^$"
+                                    placeholder="Client AP passphrase" onchange="this.setAttribute('data-changed', true);">
+                                <div class="invalid-feedback">
+                                    Please provide a valid value.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-1 align-self-center">
+                            <div class="col-sm-2 offset-sm-1">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="useDHCP" onclick="toggleDHCP();" checked>
+                                    <label class="form-check-label" for="useDHCP">
+                                    Use DHCP?
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row align-content-center" id="staIPDiv">
+                            <label for="staIP" class="col-sm-1 col-form-label">IP address</label>
+                            <div class="col-sm-auto align-content-center">
+                                <input id="staIP"
+                                    name="staIP" class="form-control" type="text" value=""
+                                    pattern="(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+                                    placeholder="0.0.0.0" required onkeyup="checkForm();"/>
+                                <div class="invalid-feedback">Please provide a valid IP address.</div>
+                            </div>
+                        </div>
+                        <div class="row align-content-center" id="staSubnetDiv">
+                            <label for="staSubnet" class="col-sm-1 col-form-label">Subnet mask</label>
+                            <div class="col-sm-auto align-content-center">
+                                <input id="staSubnet"
+                                    name="staSubnet" class="form-control" type="text" value=""
+                                    pattern="(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+                                    placeholder="255.255.255.0" required onkeyup="checkForm();"/>
+                                <div class="invalid-feedback">Please provide a valid subnet mask.</div>
+                            </div>
+                        </div>
+                        <div class="row mb-3 align-content-center" id="staGatewayDiv">
+                            <label for="staGateway" class="col-sm-1 col-form-label">Gateway</label>
+                            <div class="col-sm-auto align-content-center">
+                                <input id="staGateway"
+                                    name="staGateway" class="form-control" type="text" value=""
+                                    pattern="(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+                                    placeholder="0.0.0.0" required onkeyup="checkForm();"/>
+                                <div class="invalid-feedback">Please provide a valid gateway IP.</div>
+                            </div>
+                        </div>
+                    </fieldset>                                       
+                    <button class="btn btn-primary mt-1 ms-1" type="submit" id="subBtn" disabled>Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid fixed-bottom text-center pb-1 bg-light">
+        <div class="row">
+        <div class="col"><a href="index.html">Status page</a></div>
+        <div class="col"><a href="ota.html">Update firmware</a></div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalDialog" tabindex="-1" aria-labelledby="modalLabel" aria-modal="true"
+    role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalLabel">Configuration</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="closeModal()"></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show" id="backdrop" style="display: none;"></div>
+</body>
+<script>
+    var ipChanged = false;
+
+    function loadConfiguration(){
+        fetch('/api/config')
+            .then((response) => {
+                if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then((data) => {
+                document.title = "IT Leds configuration";
+                var inputs = document.forms["cfgForm"].getElementsByTagName("input");
+                Array.prototype.slice.call(inputs)
+                    .forEach(function (input) {
+                        let cfgValue = data[input.id] ?? null;
+                        if(cfgValue !== null) {
+                            if(input.type == "text"){
+                                if(input.inputMode == "numeric"){
+                                    input.value = parseInt(cfgValue);
+                                }else{
+                                    input.value = cfgValue;
+                                }
+                            }else if(input.type == "password"){
+                                input.value = cfgValue;
+                            }
+                        }
+                    });
+                document.getElementById("subBtn").disabled = false;
+                if(document.getElementById("staIP").value === "0.0.0.0"){
+                    document.getElementById("useDHCP").checked = true;
+                }
+                toggleDHCP();
+            })
+            .catch((error) => {
+                console.error('Fetch error:', error);
+            });
+    }
+
+    function getNetwork(ip, mask){
+        const re = /([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/i;
+        let ipGroups = re.exec(ip);
+        let maskGroup = re.exec(mask);
+        if(ipGroups && maskGroup){
+            let ipBin = ((parseInt(ipGroups[1]) & 0xFF) << 24) | ((parseInt(ipGroups[2]) & 0xFF) << 16) | ((parseInt(ipGroups[3]) & 0xFF) << 8) | (parseInt(ipGroups[4]) & 0xFF);
+            let maskBin = ((parseInt(maskGroup[1]) & 0xFF) << 24) | ((parseInt(maskGroup[2]) & 0xFF) << 16) | ((parseInt(maskGroup[3]) & 0xFF) << 8) | (parseInt(maskGroup[4]) & 0xFF);
+            let network = ipBin & maskBin;
+            //let networkStr = `${(network >> 24) & 0xFF}.${(network >> 16) & 0xFF}.${(network >> 8) & 0xFF}.${network & 0xFF}`;
+            return network;
+        }
+        return null;
+    }
+
+    function checkForm(){
+        if(!document.getElementById("useDHCP").checked){
+            document.getElementById("staGateway").setCustomValidity("");
+            let ipNet = getNetwork(document.getElementById("staIP").value, document.getElementById("staSubnet").value);
+            let gwNet = getNetwork(document.getElementById("staGateway").value, document.getElementById("staSubnet").value);
+            if((ipNet != null) && (ipNet != gwNet)){
+                document.getElementById("staGateway").setCustomValidity("Not in same network!");
+            }
+        }
+        return document.getElementById("cfgForm").checkValidity();
+    }
+
+    function openModal() {
+        document.getElementById("backdrop").style.display = "block"
+        document.getElementById("modalDialog").style.display = "block"
+        document.getElementById("modalDialog").classList.add("show")
+    }
+    function closeModal() {
+        document.getElementById("backdrop").style.display = "none"
+        document.getElementById("modalDialog").style.display = "none"
+        document.getElementById("modalDialog").classList.remove("show")
+    }
+    // Get the modal
+    var modal = document.getElementById('exampleModal');
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            closeModal()
+        }
+    }
+
+
+    function sendForm(){
+        console.log("Submit");
+        var inputs = document.forms["cfgForm"].getElementsByTagName("input");
+        var postData = {};
+        Array.prototype.slice.call(inputs)
+            .forEach(function (input) {
+                if(input.type == "checkbox"){
+                    postData[input.id] = input.checked ? true : false;
+                }else if((input.type == "text") /*&& input.value*/){
+                    if(input.inputMode == "numeric"){
+                        postData[input.id] = parseInt(input.value);
+                    }else{
+                        postData[input.id] = input.value;
+                    }
+                }else if(input.type == "password"){
+                    if(input.getAttribute("data-changed") == "true"){
+                        postData[input.id] = input.value;
+                    }
+                }
+            });
+        if(document.getElementById("useDHCP").checked) {
+            postData["staIP"] = "0.0.0.0";
+        }
+        console.log(JSON.stringify(postData));
+
+        fetch("/api/config", {
+            method: "POST",
+            body: JSON.stringify(postData),
+            headers: {
+                "Content-type": "application/json; charset=UTF-8"
+            }
+        }).then((response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then((data) => {
+            if(!data["IPChanged"]){
+                ipChanged = false;
+                document.getElementById("modalBody").innerHTML = data["message"];
+            }else{
+                ipChanged = true;
+                document.getElementById("modalBody").innerHTML = data["message"] + "<br/>IP changed, please go to new URL!";
+                document.getElementById("subBtn").disabled = true;
+                document.getElementById("subBtn").innerHTML = "IP changed";
+            }
+            openModal();
+        })
+        .catch((error) => {
+            console.error('Fetch error:', error);
+        });
+    }
+
+    function toggleDHCP(){
+        let en = document.getElementById("useDHCP").checked;
+        document.getElementById("staIPDiv").hidden = en;
+        document.getElementById("staSubnetDiv").hidden = en;
+        document.getElementById("staGatewayDiv").hidden = en;
+    }
+
+    loadConfiguration();
+    (() => {
+        'use strict'
+        document.getElementById("cfgForm").addEventListener('submit', event => {
+            if (checkForm()) {
+                sendForm();
+            }
+            event.preventDefault()
+            event.stopPropagation()
+            }, false);
+        })()
+</script>
+</html>

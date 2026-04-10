@@ -31,6 +31,9 @@
 #include "ITVuMeter.hpp"
 #include "ITParticles.hpp"
 
+#include "NetworkConfigurator.hpp"
+#include "Configuration.hpp"
+
 using namespace fl;
 
 
@@ -53,14 +56,6 @@ using namespace fl;
 
 static const char* TAG = "Main";
 
-static const char* SSID_AP = "IT_Leds";
-static const char* AP_PASS = "12345678";
-//TODO: Load from flash
-static const char* SSID_STA = "xxxx";
-static const char* STA_PASS = "xxxxx";
-IPAddress apIP(192,168,4,1);
-IPAddress apNetMask(255,255,255,0);
-
 //Audio objects
 // Global audio source (initialized in setup)
 fl::shared_ptr<fl::audio::IInput> audioSource;
@@ -74,11 +69,7 @@ fl::audio::Reactive audioReactive;
 
 CRGB onBoardLed;
 
-// #ifdef __EMSCRIPTEN__
 CRGB leds[SCREEN_WIDTH * SCREEN_HEIGHT + 1];
-// #else
-// CRGB leds[NB_STRIP_LEDS + 1];
-// #endif
 
 XYMap xymap = XYMap::constructWithUserFunction(SCREEN_WIDTH, SCREEN_HEIGHT, IT::itUserMapFunc);
 
@@ -158,18 +149,6 @@ void fastLedTask(void* param){
     }
 }
 
-void setupNetwork(){
-    Serial.println("WiFi setup");
-    WiFi.disconnect();
-    WiFi.mode(WIFI_AP_STA);
-    Serial.println("Setup soft-AP");
-    WiFi.softAPConfig(apIP, apIP, apNetMask, (uint32_t)0, apIP);
-    bool res = WiFi.softAP(SSID_AP, AP_PASS);
-    if(res){
-        Serial.println("AP ready");
-    }
-}
-
 void setup()
 {
     //Starts serial
@@ -178,14 +157,12 @@ void setup()
     //Button pin
     ::pinMode(BTN_PIN, INPUT_PULLUP);
 
-    //Setup network
-    setupNetwork();
+    //Loads configuration
+    configuration.begin();
 
-#ifdef __EMSCRIPTEN__
-    FastLED.addLeds<WS2812B, DATA_PIN_I, GRB>(leds, SCREEN_WIDTH * SCREEN_HEIGHT)
-        .setCorrection(LEDColorCorrection::TypicalLEDStrip)
-        .setScreenMap(xymap);
-#else
+    //Setup network
+    NetworkConfigurator::startNetwork();
+
     const int iCount = 2*LETTER_WIDTH + LETTER_HEIGHT;
     FastLED.addLeds<WS2812B, DATA_PIN_I, GRB>(leds, 0, iCount)
         .setCorrection(LEDColorCorrection::TypicalLEDStrip);
@@ -193,8 +170,9 @@ void setup()
         .setCorrection(LEDColorCorrection::TypicalLEDStrip);
     //Internal led to show beat detection
     FastLED.addLeds<SK6812, DATA_PIN_ONBOARD, GRB>(&onBoardLed, 1);
-#endif
+
     FastLED.setBrightness(64);
+
     fxEngine.addFx(sparks);
     fxEngine.addFx(particles);
     fxEngine.addFx(noisePalette);

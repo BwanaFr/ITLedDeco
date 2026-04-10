@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+</head>
+<body>
+<link rel="stylesheet" href="bootstrap.min.css">
+<div class="container">
+  <div class="row p-3"><h1 class="text-center">IT leds</h1></div>
+  <div class="row align-items-center">
+    <div class="col"><div class="text-end fs-5">Actual FX</div></div>
+    <div class="col"><div class="badge text-start text-bg-light" id="currentFX">--</div></div>
+  </div>
+</div>
+<div class="container-fluid fixed-bottom text-center pb-1 bg-light">
+    <div class="row">
+        <div class="col"><a href="config.html">Device configuration</a></div>
+        <div class="col"><a href="ota.html">Update firmware</a></div>
+    </div>
+</div>
+<script>
+
+function setValue(data, key, el, unit=""){
+    if((key in data)){
+        setVisible(el.closest('[class*="row"]'), true);
+        if(unit){
+            el.innerHTML = data[key] + " " + unit;
+        }else{
+            el.innerHTML = data[key];
+        }
+    }else{
+        setVisible(el.closest('[class*="row"]'), false);
+    }
+}
+
+function setBiColorValue(data, key, el, fn, hide){
+    let autoHide = true;
+    if(typeof hide === 'boolean'){
+        autoHide = hide;
+    }
+    if((key in data)){
+        setVisible(el.closest('[class*="row"]'), true);
+        el.innerHTML = data[key];
+        if(typeof fn === "function"){
+            el.classList.remove('text-bg-success', 'text-bg-danger', 'text-bg-light');
+            let val = fn(data[key]);
+            if(val){
+                el.classList.add('text-bg-success');
+            }else{
+                el.classList.add('text-bg-danger');
+            }
+        }
+    }else{
+        if(autoHide){
+            setVisible(el.closest('[class*="row"]'), false);
+        }
+    }
+}
+
+function fetchInfo(){
+    const req = new XMLHttpRequest();
+    req.open("GET",'/api/status',true);
+    req.onload = function(){
+        const json = JSON.parse(req.responseText);
+        document.getElementById("currentFX").classList.remove('text-bg-danger');
+        document.getElementById("currentFX").classList.add('text-bg-light');
+        document.getElementById("currentFX").innerHTML = json["FXName"];
+
+    };
+    req.onerror = function(e) {
+        document.getElementById("currentFX").classList.add('text-bg-danger');
+        document.getElementById("currentFX").innerHTML = "Offline (network error)";
+    };
+    req.send();
+    setInterval(fetchInfo, 1000);
+};
+
+fetchInfo();
+
+</script>
+
+</body>
+</html>

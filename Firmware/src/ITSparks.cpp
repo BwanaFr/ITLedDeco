@@ -1,7 +1,6 @@
-#pragma once
 #include <FastLED.h>
-#include "ITSparks.h"
-#include "ITLedMap.h"
+#include "ITSparks.hpp"
+#include "ITLedMap.hpp"
 
 #define BLUR_AMOUNT 2
 

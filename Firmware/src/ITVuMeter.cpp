@@ -1,7 +1,6 @@
-#pragma once
 #include <FastLED.h>
-#include "ITVuMeter.h"
-#include "ITLedMap.h"
+#include "ITVuMeter.hpp"
+#include "ITLedMap.hpp"
 #include <Arduino.h>
 
 #define BLUR_AMOUNT 2

@@ -1,4 +1,4 @@
-#include "ITLedMap.h"
+#include "ITLedMap.hpp"
 
 fl::u16 IT::itUserMapFunc(fl::u16 x, fl::u16 y, fl::u16 width, fl::u16 height)
 {
