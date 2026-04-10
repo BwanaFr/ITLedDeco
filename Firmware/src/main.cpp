@@ -15,10 +15,11 @@
  *
  */
 
+#include <WiFi.h>
 #include "FastLED.h"
 #include <Arduino.h>
 //#include "esp_log.h"
-#include "ITLedMap.h"
+#include "ITLedMap.hpp"
 #include "fl/ui.h"
 #include "fl/fx/fx_engine.h"
 #include "fl/fx/1d/particles.h"
@@ -26,9 +27,9 @@
 #include "fl/audio/auto_gain.h"
 #include "fl/audio/audio_reactive.h"
 
-#include "ITSparks.h"
-#include "ITVuMeter.h"
-#include "ITParticles.h"
+#include "ITSparks.hpp"
+#include "ITVuMeter.hpp"
+#include "ITParticles.hpp"
 
 using namespace fl;
 
@@ -51,6 +52,14 @@ using namespace fl;
 #define I2S_CHANNEL fl::audio::AudioChannel::Left
 
 static const char* TAG = "Main";
+
+static const char* SSID_AP = "IT_Leds";
+static const char* AP_PASS = "12345678";
+//TODO: Load from flash
+static const char* SSID_STA = "xxxx";
+static const char* STA_PASS = "xxxxx";
+IPAddress apIP(192,168,4,1);
+IPAddress apNetMask(255,255,255,0);
 
 //Audio objects
 // Global audio source (initialized in setup)
@@ -133,22 +142,6 @@ void fastLedTask(void* param){
         }
 
         if(audioReactive.isBeat()){
-            if(audioReactive.isBassBeat()){
-                Serial.printf("B\n");
-            }else if(audioReactive.isMidBeat()){
-                Serial.printf("M\n");
-            }else if(audioReactive.isTrebleBeat()){
-                Serial.printf("T\n");
-            }else if(audioReactive.isKick()){
-                Serial.printf("K\n");
-            }else if(audioReactive.isSnare()){
-                Serial.printf("S\n");
-            }else if(audioReactive.isHiHat()){
-                Serial.printf("H\n");
-            }else if(audioReactive.isTom()){
-                Serial.printf("Tom\n");
-            }
-
             // if(audioReactive.isKick()){?
                 onBoardLed = CRGB::White;
                 itParticles.spawnRandomParticle();
@@ -165,6 +158,18 @@ void fastLedTask(void* param){
     }
 }
 
+void setupNetwork(){
+    Serial.println("WiFi setup");
+    WiFi.disconnect();
+    WiFi.mode(WIFI_AP_STA);
+    Serial.println("Setup soft-AP");
+    WiFi.softAPConfig(apIP, apIP, apNetMask, (uint32_t)0, apIP);
+    bool res = WiFi.softAP(SSID_AP, AP_PASS);
+    if(res){
+        Serial.println("AP ready");
+    }
+}
+
 void setup()
 {
     //Starts serial
@@ -172,6 +177,9 @@ void setup()
 
     //Button pin
     ::pinMode(BTN_PIN, INPUT_PULLUP);
+
+    //Setup network
+    setupNetwork();
 
 #ifdef __EMSCRIPTEN__
     FastLED.addLeds<WS2812B, DATA_PIN_I, GRB>(leds, SCREEN_WIDTH * SCREEN_HEIGHT)
@@ -232,16 +240,15 @@ void setup()
     // Enable signal conditioning (DC removal, spike filter, noise gate)
     reactConfig.enableSignalConditioning = false;
     // Enable advanced beat tracking with BPM
-    reactConfig.enableMusicalBeatDetection = false;
+    reactConfig.enableMusicalBeatDetection = true;
     // Enable noise floor tracking
     reactConfig.enableNoiseFloorTracking = false;
     //Enable per-band beat detection
     reactConfig.enableMultiBandBeats = true;
 
-    reactConfig.enableMultiBand = false;
-
     audioReactive.begin(reactConfig);
 
+    //Create the FreeRTOS OS with a stack of 16KB
     xTaskCreate(fastLedTask, "FastLed", 16*1024, nullptr, 1, NULL);
 }
 

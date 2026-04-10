@@ -26,5 +26,3 @@ private:
 
     void SetupPurpleAndGreenPalette();
 };
-
-#include "ITVuMeter.cpp.hpp"

@@ -18,5 +18,3 @@ private:
     fl::u16 rate_;      //!<< Sparks generation rate [ms]
     fl::u32 lastGen_;   //!<< Last time sparks was generated
 };
-
-#include "ITSparks.cpp.hpp"

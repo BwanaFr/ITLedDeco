@@ -33,8 +33,14 @@ public:
      * @see fl::Particles1d::setOverdrawCount(fl::u8)
      */
     void setOverdrawCount(fl::u8 count);
+
+    /**
+     * Sets the number of paritcules to spawn
+     * @param spawnNumber Number of particules to spawn
+     */
+    inline void setNbParticules(fl::u8 spawnNumber){ nbParticules_ = spawnNumber; }
+    inline fl::u8 getNbParticules() const { return nbParticules_; }
 private:
     std::array<fl::Particles1d, 5> subStrips_;
+    fl::u8 nbParticules_;
 };
-
-#include <ITParticles.cpp.hpp>

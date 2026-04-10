@@ -34,5 +34,3 @@ public:
     static fl::u16 itUserMapFunc(fl::u16 x, fl::u16 y, fl::u16 width, fl::u16 height);
     static void toXY(fl::u16 index, fl::u16& x, fl::u16& y);
 };
-
-#include "ITLedMap.cpp.hpp"

@@ -4,7 +4,8 @@
 
 ITParticles::ITParticles(fl::u16 num_leds, fl::u8 max_particles, fl::u8 fade_rate) : Fx1d(num_leds),
             subStrips_{fl::Particles1d(LETTER_WIDTH, max_particles, fade_rate), fl::Particles1d(LETTER_HEIGHT, max_particles, fade_rate),
-                        fl::Particles1d(LETTER_WIDTH, max_particles, fade_rate), fl::Particles1d(LETTER_HEIGHT, max_particles, fade_rate), fl::Particles1d(LETTER_WIDTH, max_particles, fade_rate)}
+                        fl::Particles1d(LETTER_WIDTH, max_particles, fade_rate), fl::Particles1d(LETTER_HEIGHT, max_particles, fade_rate), fl::Particles1d(LETTER_WIDTH, max_particles, fade_rate)},
+            nbParticules_{3}
 {
     for(fl::Particles1d& p : subStrips_){
         p.setCyclical(false);
@@ -59,6 +60,8 @@ void ITParticles::draw(DrawContext context)
 
 void ITParticles::spawnRandomParticle()
 {
-    fl::u8 strip = random8() % subStrips_.size();
-    subStrips_[strip].spawnRandomParticle();
+    for(int i=0;i<3;++i){
+        fl::u8 strip = random8() % subStrips_.size();
+        subStrips_[strip].spawnRandomParticle();
+    }
 }
