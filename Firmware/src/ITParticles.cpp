@@ -1,10 +1,12 @@
 #include <ITParticles.hpp>
 #include <ITLedMap.hpp>
 
-ITParticles::ITParticles(fl::u16 num_leds, fl::u8 max_particles, fl::u8 fade_rate) : Fx1d(num_leds),
+ITParticles::ITParticles(fl::u16 num_leds, fl::u8 max_particles, fl::u8 fade_rate) :
+            Fx1d{num_leds},
+            LedFX{this},
             subStrips_{fl::Particles1d(LETTER_WIDTH, max_particles, fade_rate), fl::Particles1d(LETTER_HEIGHT, max_particles, fade_rate),
                         fl::Particles1d(LETTER_WIDTH, max_particles, fade_rate), fl::Particles1d(LETTER_HEIGHT, max_particles, fade_rate), fl::Particles1d(LETTER_WIDTH, max_particles, fade_rate)},
-            nbParticules_{3}
+            nbParticules_{max_particles}
 {
     for(fl::Particles1d& p : subStrips_){
         p.setCyclical(false);
@@ -59,8 +61,23 @@ void ITParticles::draw(DrawContext context)
 
 void ITParticles::spawnRandomParticle()
 {
-    for(int i=0;i<3;++i){
+    fl::u8 parts = /*random8(*/nbParticules_;//);
+    for(int i=0;i<parts;++i){
         fl::u8 strip = random8() % subStrips_.size();
         subStrips_[strip].spawnRandomParticle();
+    }
+}
+
+void ITParticles::getConfiguration(JsonObject& obj) const
+{
+    createSetting(obj, "reactive", "Music reactive?", true);
+    createSetting<fl::u8>(obj, "maxParts", "Maximum particules", nbParticules_, 0);
+}
+
+void ITParticles::audioReactive(fl::audio::Reactive& reactive)
+{
+    //Spwan a random particule when a beat is detected
+    if(reactive.isBeat()){
+        spawnRandomParticle();
     }
 }

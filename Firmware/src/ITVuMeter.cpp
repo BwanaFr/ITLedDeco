@@ -5,7 +5,10 @@
 
 #define BLUR_AMOUNT 2
 
-ITVuMeter::ITVuMeter(const fl::XYMap &xymap) : fl::Fx2d(xymap), rate_{20}, lastGen_{0}, level_{0}, fadeRate_{15}, currentPalette_{PartyColors_p}
+ITVuMeter::ITVuMeter(const fl::XYMap &xymap) :
+        fl::Fx2d(xymap),
+        LedFX{this},
+        rate_{20}, lastGen_{0}, level_{0}, fadeRate_{15}, currentPalette_{PartyColors_p}
 {
 }
 
@@ -95,7 +98,8 @@ void ITVuMeter::setPalette(int index)
     }
 }
 
-void ITVuMeter::SetupGrayAndWhiteStripedPalette() {
+void ITVuMeter::SetupGrayAndWhiteStripedPalette()
+{
     fill_solid(currentPalette_, 16, CRGB::Gray50);
     currentPalette_[0] = CRGB::White;
     currentPalette_[4] = CRGB::White;
@@ -103,7 +107,8 @@ void ITVuMeter::SetupGrayAndWhiteStripedPalette() {
     currentPalette_[12] = CRGB::White;
 }
 
-void ITVuMeter::SetupPurpleAndGreenPalette() {
+void ITVuMeter::SetupPurpleAndGreenPalette()
+{
     CRGB purple = CHSV(HUE_PURPLE, 255, 255);
     CRGB green = CHSV(HUE_GREEN, 255, 255);
     CRGB yellow = CHSV(HUE_YELLOW, 255, 255);
@@ -111,4 +116,17 @@ void ITVuMeter::SetupPurpleAndGreenPalette() {
     currentPalette_ = CRGBPalette16(
         green, green, yellow, yellow, purple, purple, yellow, yellow, green,
         green, yellow, yellow, purple, purple, yellow, yellow);
+}
+
+void ITVuMeter::getConfiguration(JsonObject& doc) const
+{
+
+}
+
+void ITVuMeter::audioReactive(fl::audio::Reactive& reactive)
+{
+    float be = reactive.getBassEnergy();
+    //TODO: Auto-adapt max?
+    fl::u8 level = static_cast<fl::u8>(fl::map_range_clamped(be, 0.0f, 1000.0f, 0, 255));
+    setLevel(level);
 }

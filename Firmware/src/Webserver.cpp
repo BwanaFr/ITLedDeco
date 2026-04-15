@@ -12,6 +12,7 @@
 #include <esp_partition.h>
 #include <ArduinoJson.h>
 #include <Configuration.hpp>
+#include <LedFXManager.hpp>
 #include "StaticWebContent.h"
 
 #define MAX_OTA_FILENAME 64
@@ -19,6 +20,8 @@
 #define HTTPD_401   "401 UNAUTHORIZED"           /*!< HTTP Response 401 */
 
 #define API_URI "/api/"
+
+extern LedFXManager fxManager;
 
 #define FW_HEADER_LEN 8
 static const char FW_HEADER[FW_HEADER_LEN] = "LED-FW";
@@ -32,6 +35,7 @@ const Webserver::HandlerMap Webserver::postHandlers = {
 const Webserver::HandlerMap Webserver::getHandlers = {
     {API_URI "config", Webserver::cfg_get_handler},
     {API_URI "tasks", Webserver::tasks_info_get_handler},
+    {API_URI "fxConfig", Webserver::fx_cfg_get_handler},
 };
 
 Webserver webServer;
@@ -442,14 +446,39 @@ esp_err_t Webserver::tasks_info_get_handler( httpd_req_t *req )
     return ESP_OK;
 }
 
+esp_err_t Webserver::fx_cfg_get_handler( httpd_req_t *req )
+{
+    Webserver* instance = static_cast<Webserver*>(req->user_ctx);
+
+    httpd_resp_set_status( req, HTTPD_200 );
+    httpd_resp_set_hdr( req, "Connection", "keep-alive" );
+    httpd_resp_set_type(req, "application/json");
+    //Build a JSON with tasks info
+    JsonDocument doc;
+    fxManager.getFXConfigurations(doc);
+
+    //Serialize to string
+    std::string jsonStr;
+    serializeJson(doc, jsonStr);
+    httpd_resp_send( req, jsonStr.c_str(), jsonStr.length());
+    return ESP_OK;
+}
+
 esp_err_t Webserver::not_found_handler( httpd_req_t *req )
 {
-    // Set status
-    httpd_resp_set_status(req, "303 See Other");
-    // Redirect to the "/" root directory
-    httpd_resp_set_hdr(req, "Location", "/");
-    // iOS requires content in the response to detect a captive portal, simply redirecting is not sufficient.
-    httpd_resp_send(req, "Redirect to the captive portal", HTTPD_RESP_USE_STRLEN);
+    std::string uri = req->uri;
+    if(uri.starts_with("/api") || uri == "favicon.ico"){
+        //404 for API and favicon
+        httpd_resp_set_status(req, HTTPD_404);
+        httpd_resp_send(req, "Not found", HTTPD_RESP_USE_STRLEN);
+    }else{
+        // Set status
+        httpd_resp_set_status(req, "303 See Other");
+        // Redirect to the "/" root directory
+        httpd_resp_set_hdr(req, "Location", "/");
+        // iOS requires content in the response to detect a captive portal, simply redirecting is not sufficient.
+        httpd_resp_send(req, "Redirect to the captive portal", HTTPD_RESP_USE_STRLEN);
+    }
     return ESP_OK;
 }
 

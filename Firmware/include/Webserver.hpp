@@ -55,6 +55,7 @@ private:
     static esp_err_t cfg_get_handler( httpd_req_t *req );           //Handle configuration GET request
     static esp_err_t cfg_post_handler( httpd_req_t *req );          //Handle configuration POST request
     static esp_err_t tasks_info_get_handler( httpd_req_t *req );    //FreeRTOS tasks GET request
+    static esp_err_t fx_cfg_get_handler( httpd_req_t *req );        //Gets LED FX configurations
 
     static esp_err_t not_found_handler( httpd_req_t *req );     //404 not found error
     static esp_err_t redirect_handler( httpd_req_t *req );      //Redirects to index.html

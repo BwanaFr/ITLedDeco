@@ -72,10 +72,9 @@ function fetchInfo(){
         document.getElementById("currentFX").innerHTML = "Offline (network error)";
     };
     req.send();
-    setInterval(fetchInfo, 1000);
 };
 
-fetchInfo();
+setInterval(fetchInfo, 1000);
 
 </script>
 

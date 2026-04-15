@@ -4,7 +4,10 @@
 
 #define BLUR_AMOUNT 2
 
-ITSparks::ITSparks(const fl::XYMap &xymap) : fl::Fx2d(xymap), nbSparks_{10}, rate_{100}
+ITSparks::ITSparks(const fl::XYMap &xymap) :
+    fl::Fx2d(xymap),
+    LedFX{this},
+    nbSparks_{10}, rate_{100}
 {
 }
 
@@ -29,4 +32,10 @@ void ITSparks::draw(fl::Fx::DrawContext context)
 fl::string ITSparks::fxName() const
 {
     return "ITSparks";
+}
+
+void ITSparks::getConfiguration(JsonObject& obj) const
+{
+    createSetting<int>(obj, "sparks", "Sparks count", nbSparks_, 0, 20);
+    createSetting<int>(obj, "rate", "Generation rate [ms]", rate_, 0);
 }

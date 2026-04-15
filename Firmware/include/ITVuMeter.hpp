@@ -1,10 +1,9 @@
 #pragma once
 
 #include "fl/fx/fx2d.h"
+#include <LedFX.hpp>
 
-
-
-class ITVuMeter : public fl::Fx2d {
+class ITVuMeter : public fl::Fx2d, public LedFX {
 public:
     ITVuMeter(const fl::XYMap &xymap);
     inline void setRate(const fl::u16 rate) { rate_ = rate; }
@@ -14,6 +13,9 @@ public:
     void setLevel(fl::u8 level);
     void setRandomPalette();
     void setPalette(int index);
+    void getConfiguration(JsonObject& doc) const override;
+    void audioReactive(fl::audio::Reactive& reactive) override;
+
 private:
     fl::u16 rate_;                      //!<< Sparks generation rate [ms]
     fl::u32 lastGen_;                   //!<< Last time sparks was generated

@@ -2,8 +2,9 @@
 
 #include <array>
 #include <fl/fx/1d/particles.h>
+#include <LedFX.hpp>
 
-class ITParticles : public fl::Fx1d {
+class ITParticles : public fl::Fx1d, public LedFX {
 public:
     ITParticles(fl::u16 num_leds, fl::u8 max_particles = 3, fl::u8 fade_rate = 1);
     virtual ~ITParticles();
@@ -39,7 +40,20 @@ public:
      * @param spawnNumber Number of particules to spawn
      */
     inline void setNbParticules(fl::u8 spawnNumber){ nbParticules_ = spawnNumber; }
+
+    /**
+     * Gets number of particules to spawn
+     * @return Number of particules to spawn
+     */
     inline fl::u8 getNbParticules() const { return nbParticules_; }
+
+    /**
+     * Gets FX configuration
+     */
+    void getConfiguration(JsonObject& obj) const override;
+
+    void audioReactive(fl::audio::Reactive& reactive) override;
+
 private:
     std::array<fl::Particles1d, 5> subStrips_;
     fl::u8 nbParticules_;

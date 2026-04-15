@@ -1,10 +1,10 @@
 #pragma once
 
 #include "fl/fx/fx2d.h"
+#include <LedFX.hpp>
 
 
-
-class ITSparks : public fl::Fx2d {
+class ITSparks : public fl::Fx2d, public LedFX {
 public:
     ITSparks(const fl::XYMap &xymap);
     inline void setNbSparks(const fl::u16 count) { nbSparks_ = count; }
@@ -12,6 +12,7 @@ public:
     virtual void draw(fl::Fx::DrawContext context) override;
     virtual fl::string fxName() const override;
 
+    virtual void getConfiguration(JsonObject& obj) const override;
 private:
 
     fl::u16 nbSparks_;  //!<< Number of sparks

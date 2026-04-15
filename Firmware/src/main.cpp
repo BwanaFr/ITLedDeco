@@ -18,18 +18,20 @@
 #include <WiFi.h>
 #include "FastLED.h"
 #include <Arduino.h>
-//#include "esp_log.h"
+#include "esp_log.h"
+
 #include "ITLedMap.hpp"
-#include "fl/ui.h"
-#include "fl/fx/fx_engine.h"
-#include "fl/fx/1d/particles.h"
-#include "fl/fx/2d/noisepalette.h"
+#include <LedFXManager.hpp>
+
 #include "fl/audio/auto_gain.h"
 #include "fl/audio/audio_reactive.h"
 
+#include "FLNoisePalette.hpp"
+#include "FLParticles.hpp"
 #include "ITSparks.hpp"
 #include "ITVuMeter.hpp"
 #include "ITParticles.hpp"
+#include "ITVuMeter.hpp"
 
 #include "NetworkConfigurator.hpp"
 #include "Configuration.hpp"
@@ -69,16 +71,18 @@ fl::audio::Reactive audioReactive;
 
 CRGB onBoardLed;
 
-CRGB leds[SCREEN_WIDTH * SCREEN_HEIGHT + 1];
+CRGB leds[SCREEN_WIDTH * SCREEN_HEIGHT + 1];    //Do we need to allocate all 2D LEDs????
 
 XYMap xymap = XYMap::constructWithUserFunction(SCREEN_WIDTH, SCREEN_HEIGHT, IT::itUserMapFunc);
 
 ITSparks sparks(xymap);
-fl::Particles1d particles(NB_STRIP_LEDS + 1, 2, 2);
-fl::NoisePalette noisePalette(xymap);
-ITVuMeter ITVuMeter(xymap);
-ITParticles itParticles(NB_STRIP_LEDS + 1);
-fl::FxEngine fxEngine(SCREEN_WIDTH * SCREEN_HEIGHT, false); //08/04/28 : Activating interpolation results in heap crashes
+FLParticles particles(NB_STRIP_LEDS, 2, 2);
+FLNoisePalette noisePalette(xymap);
+ITVuMeter itVuMeter(xymap);
+ITParticles itParticles(NB_STRIP_LEDS + 1, 5);
+
+LedFXManager fxManager{SCREEN_WIDTH * SCREEN_HEIGHT};
+// fl::FxEngine fxEngine(SCREEN_WIDTH * SCREEN_HEIGHT, false); //08/04/28 : Activating interpolation results in heap crashes
 
 /**
  * Runs in a FreeRTOS task to avoid stack overflow
@@ -103,44 +107,29 @@ void fastLedTask(void* param){
             audioReactive.processSample(sample);
         }
 
-        EVERY_N_MILLISECONDS(200) {
-            particles.spawnRandomParticle();
-        }
+        // EVERY_N_MILLISECONDS(10000) {
+        //     noisePalette.changeToRandomPalette();
+        //     ITVuMeter.setRandomPalette();
+        // }
 
-        EVERY_N_MILLISECONDS(10000) {
-            noisePalette.changeToRandomPalette();
-            ITVuMeter.setRandomPalette();
-        }
-        float be = audioReactive.getBassEnergy();
-        fl::u8 level = static_cast<fl::u8>(fl::map_range_clamped(be, 0.0f, 1000.0f, 0, 255));
-        ITVuMeter.setLevel(level);
 
         bool btnState = ::digitalRead(BTN_PIN);
         if(!btnState && (btnState != lastBtn)){
-            lastFxSwitchTime = ::millis();
-            fxEngine.nextFx(50);
-            btnUsed = true;
-            Serial.printf("Press : Next FX -> %s\n", fxEngine.getFx(fxEngine.getCurrentFxId())->fxName().c_str());
+            if(!fxManager.isAutoChange()){
+                fxManager.nextFX();
+            }
+            fxManager.setAutoChange(!fxManager.isAutoChange());
+            if(fxManager.isAutoChange()){
+                ESP_LOGI(TAG, "Automatic FX switch");
+            }else{
+                ESP_LOGI(TAG, "No-automatic FX switch");
+            }
         }
         lastBtn = btnState;
-
-        fxEngine.draw(fl::millis(), leds);
-
-        if(!btnUsed && ((::millis() - lastFxSwitchTime) >= 10000)){
-            lastFxSwitchTime = ::millis();
-            fxEngine.nextFx(500);
-            Serial.printf("Next FX -> %s\n", fxEngine.getFx(fxEngine.getCurrentFxId())->fxName().c_str());
-        }
+        fxManager.draw(leds, (sample.isValid() ? &audioReactive : nullptr));
 
         if(audioReactive.isBeat()){
-            // if(audioReactive.isKick()){?
-                onBoardLed = CRGB::White;
-                itParticles.spawnRandomParticle();
-            // }
-        /*}else if(audioReactive.getSmoothedData().bassEnergy > (bassEnergy/2.0)){*/
-            /*float bass = audioReactive.getBass();
-            bass = (bass < 0.0f) ? 0.0f : ((bass > 255.0f) ? 255.0f : bass);
-            onBoardLed = ColorFromPalette(RainbowColors_p, static_cast<fl::u8>(bass));*/
+            onBoardLed = CRGB::White;
         }else{
             onBoardLed.fadeToBlackBy(50);
         }
@@ -173,11 +162,11 @@ void setup()
 
     FastLED.setBrightness(64);
 
-    fxEngine.addFx(sparks);
-    fxEngine.addFx(particles);
-    fxEngine.addFx(noisePalette);
-    fxEngine.addFx(ITVuMeter);
-    fxEngine.addFx(itParticles);
+    fxManager.registerFx(&noisePalette);
+    fxManager.registerFx(&particles);
+    fxManager.registerFx(&sparks);
+    fxManager.registerFx(&itParticles);
+    fxManager.registerFx(&itVuMeter);
 
     //Enable audio
     // Create platform-specific audio configuration
