@@ -38,6 +38,11 @@ public:
      */
     void getFXConfigurations(JsonDocument& doc) const;
 
+    /**
+     * Sets FX configuration(s)
+     */
+    void setFXConfigurations(const JsonDocument& doc);
+
 private:
     fl::FxEngine fxEngine_;
     typedef std::map<int, LedFX*> FXMap;

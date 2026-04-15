@@ -14,7 +14,7 @@ void FLParticles::beforeDraw()
     }
 }
 
-void FLParticles::getConfiguration(JsonObject& obj) const
+void FLParticles::getCustomConfiguration(JsonObject& obj) const
 {
     createSetting<fl::u32>(obj, "spawnTime", "Spawn every [ms]", spawnTime_, 0);
 }

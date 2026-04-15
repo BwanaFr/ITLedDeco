@@ -63,8 +63,14 @@ void LedFXManager::getFXConfigurations(JsonDocument& doc) const
 {
     for(FXMap::const_iterator it=fxMap_.begin(); it != fxMap_.end(); ++it){
         LedFX* fx = it->second;
-        JsonObject obj = doc[fx->getFX()->fxName()].to<JsonObject>();
-        obj["enabled"] = fx->isEnabled();
-        fx->getConfiguration(obj);
+        fx->getConfiguration(doc);
+    }
+}
+
+void LedFXManager::setFXConfigurations(const JsonDocument& doc)
+{
+    for(FXMap::const_iterator it=fxMap_.begin(); it != fxMap_.end(); ++it){
+        LedFX* fx = it->second;
+        fx->setConfiguration(doc);
     }
 }

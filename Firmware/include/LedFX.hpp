@@ -17,15 +17,14 @@ public:
     virtual ~LedFX() = default;
 
     /**
-     * Gets specific configuration for the FX
+     * Gets configuration for the FX
      */
-    virtual void getConfiguration(JsonObject& obj) const;
-
+    void getConfiguration(JsonDocument& doc) const;
 
     /**
      * Sets specific configuration for this FX
      */
-    virtual bool setConfiguration(const JsonObject& obj);
+    bool setConfiguration(const JsonDocument& doc);
 
     /**
      * Sets time to show the FX
@@ -54,7 +53,7 @@ public:
     /**
      * Gets pointer to the underlined FastLED FX
      */
-    inline fl::Fx* getFX() { return fx_; };
+    inline fl::Fx* getFX() const { return fx_; };
 
     /**
      * Sets if this FX is enabled
@@ -78,8 +77,15 @@ public:
      */
     virtual void beforeDraw();
 protected:
-//Several helpers to create settings in the JSON object
 
+    virtual void getCustomConfiguration(JsonObject& obj) const;
+
+    /**
+     * Sets configuration for the FX
+     */
+    virtual void setCustomConfiguration(const JsonObject& obj);
+
+//Several helpers to create settings in the JSON object
     /**
      * Creates a generic setting
      */

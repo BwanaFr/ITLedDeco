@@ -13,7 +13,7 @@ public:
     void setLevel(fl::u8 level);
     void setRandomPalette();
     void setPalette(int index);
-    void getConfiguration(JsonObject& doc) const override;
+    void getCustomConfiguration(JsonObject& doc) const override;
     void audioReactive(fl::audio::Reactive& reactive) override;
 
 private:

@@ -118,7 +118,7 @@ void ITVuMeter::SetupPurpleAndGreenPalette()
         green, yellow, yellow, purple, purple, yellow, yellow);
 }
 
-void ITVuMeter::getConfiguration(JsonObject& doc) const
+void ITVuMeter::getCustomConfiguration(JsonObject& doc) const
 {
 
 }

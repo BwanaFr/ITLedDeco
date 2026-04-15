@@ -30,6 +30,7 @@ static const char* TAG = "Webserver";
 const Webserver::HandlerMap Webserver::postHandlers = {
     {API_URI "ota", Webserver::ota_post_handler},
     {API_URI "config", Webserver::cfg_post_handler},
+    {API_URI "fxConfig", Webserver::fx_cfg_post_handler},
 };
 
 const Webserver::HandlerMap Webserver::getHandlers = {
@@ -463,6 +464,40 @@ esp_err_t Webserver::fx_cfg_get_handler( httpd_req_t *req )
     httpd_resp_send( req, jsonStr.c_str(), jsonStr.length());
     return ESP_OK;
 }
+
+
+esp_err_t Webserver::fx_cfg_post_handler( httpd_req_t *req )
+{
+    Webserver* instance = static_cast<Webserver*>(req->user_ctx);
+    size_t dataSize = std::min((size_t)512, req->content_len);
+    std::string content;
+    content.resize(dataSize);
+    int ret = httpd_req_recv(req, &content[0], dataSize);
+    if (ret <= 0) {  /* 0 return value indicates connection closed */
+        /* Check if timeout occurred */
+        if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+            /* In case of timeout one can choose to retry calling
+            * httpd_req_recv(), but to keep it simple, here we
+            * respond with an HTTP 408 (Request Timeout) error */
+            httpd_resp_send_408(req);
+        }
+        /* In case of error, returning ESP_FAIL will
+        * ensure that the underlying socket is closed */
+        return ESP_FAIL;
+    }
+    ESP_LOGI(TAG, "FX JSON (%u) : %s", dataSize, content.c_str());
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, content);
+    if(error){
+        httpd_resp_set_status( req, HTTPD_500 );    // Assume failure
+        httpd_resp_send( req, "{\"message\":\"JSON parse failure\"}", HTTPD_RESP_USE_STRLEN );
+        return ESP_OK;
+    }
+    fxManager.setFXConfigurations(doc);
+    httpd_resp_send(req, "{\"message\":\"Configuration updated!\"}", HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
 
 esp_err_t Webserver::not_found_handler( httpd_req_t *req )
 {

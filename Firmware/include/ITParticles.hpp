@@ -50,7 +50,7 @@ public:
     /**
      * Gets FX configuration
      */
-    void getConfiguration(JsonObject& obj) const override;
+    void getCustomConfiguration(JsonObject& obj) const override;
 
     void audioReactive(fl::audio::Reactive& reactive) override;
 

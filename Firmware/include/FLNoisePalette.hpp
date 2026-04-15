@@ -9,7 +9,7 @@ public:
     FLNoisePalette(fl::XYMap xyMap);
     virtual ~FLNoisePalette() = default;
     void beforeDraw();
-    void getConfiguration(JsonObject& obj) const override;
+    void getCustomConfiguration(JsonObject& obj) const override;
 private:
     fl::NoisePalette npFx_;
     fl::u32 changePaletteTime_;

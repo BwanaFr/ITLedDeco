@@ -68,7 +68,7 @@ void ITParticles::spawnRandomParticle()
     }
 }
 
-void ITParticles::getConfiguration(JsonObject& obj) const
+void ITParticles::getCustomConfiguration(JsonObject& obj) const
 {
     createSetting(obj, "reactive", "Music reactive?", true);
     createSetting<fl::u8>(obj, "maxParts", "Maximum particules", nbParticules_, 0);

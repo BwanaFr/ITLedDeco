@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <style type="text/css">
+        .form-control::placeholder{opacity:0.4}
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid pb-5">
+        <form id="cfgForm" class="needs-validation was-validated" novalidate>
+            <div class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label class="col-form-label" for="fxSelect">Select FX:</label>
+                </div>
+                <div class="col-auto">
+                    <select class="form-select ms-1 w-100" id="fxSelect" onchange="selectChanged();">
+                    </select>
+                </div>
+            </div>
+            <div id="fxConfig" class="row"></div>
+            <div class="row">
+                <button class="btn btn-primary mt-1 ms-1 col-auto" type="submit" id="subBtn" disabled>Submit</button>
+            </div>
+        </form>
+    </div>
+    <div class="container-fluid fixed-bottom text-center pb-1 bg-light">
+        <div class="row">
+        <div class="col"><a href="index.html">Status page</a></div>
+        </div>
+    </div>
+</body>
+<script>
+    var config = null;
+
+    function loadConfiguration(){
+        fetch('/api/fxConfig')
+            .then((response) => {
+                if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then((data) => {
+                document.title = "IT Leds configuration";
+                const sel = document.getElementById("fxSelect");
+                for(fxConf in data){
+                    const opt = document.createElement("option");
+                    opt.value = fxConf;
+                    opt.text = fxConf;
+                    sel.add(opt);
+                }
+                config = data;
+                selectChanged();
+                document.getElementById("subBtn").disabled = false;
+            })
+            .catch((error) => {
+                console.error('Fetch error:', error);
+            });
+    }
+
+    function selectChanged(){
+        const sel = document.getElementById("fxSelect");
+        let fxName = sel.value;
+        for(fxConf in config){
+            if(fxConf === fxName){
+                const cfgDiv = document.getElementById("fxConfig");
+                cfgDiv.replaceChildren();
+                const cfgData = config[fxName];
+                for(data in cfgData){
+                    const ctrl = createFormControl(cfgData[data], data);
+                    if(ctrl){
+                        cfgDiv.appendChild(ctrl);
+                    }
+                }
+            }
+        }
+    }
+
+    function createFormControl(el, name){
+        const bDiv = document.createElement("div");
+        bDiv.setAttribute("class", "row align-items-center");
+        if(typeof(el) == "boolean"){
+            let lblDiv = document.createElement("div");
+            lblDiv.setAttribute("class", "col-auto");
+            bDiv.appendChild(lblDiv);
+            let chkLabel = document.createElement("label");
+            chkLabel.setAttribute("class", "col-form-label");
+            chkLabel.setAttribute("for", name);
+            chkLabel.append(name + " ?");
+            lblDiv.appendChild(chkLabel);
+
+            let chkDiv = document.createElement("div");
+            chkDiv.setAttribute("class", "col-auto");
+            bDiv.appendChild(chkDiv);
+            let chkBox = document.createElement("input");
+            chkBox.setAttribute("class", "form-check-input");
+            chkBox.setAttribute("type", "checkbox");
+            chkBox.setAttribute("id", name);
+            chkBox.setAttribute("checked", el);
+            chkDiv.appendChild(chkBox);
+        }else if(typeof(el) === "object"){
+            let lblDiv = document.createElement("div");
+            lblDiv.setAttribute("class", "col-auto");
+            bDiv.appendChild(lblDiv);
+            let chkLabel = document.createElement("label");
+            chkLabel.setAttribute("class", "col-form-label");
+            chkLabel.setAttribute("for", name);
+            chkLabel.append(el["desc"]);
+            lblDiv.appendChild(chkLabel);
+
+            const val = el["val"];
+            if(typeof(val) === "number"){
+                let min = el["min"];
+                let max = el["max"];
+                let numDiv = document.createElement("div");
+                numDiv.setAttribute("class", "col-auto");
+                bDiv.appendChild(numDiv);
+
+                let numCtrl = document.createElement("input");
+                numCtrl.setAttribute("id", name);
+                numCtrl.setAttribute("min", min);
+                numCtrl.setAttribute("max", max);
+                numCtrl.value = val;
+                numDiv.appendChild(numCtrl);
+
+                if((typeof(min) != "undefined") && (typeof(max) != "undefined")){
+                    var valOutput = document.createElement("output");
+                    lblDiv.append(" : ");
+                    lblDiv.appendChild(valOutput);
+                    valOutput.value = val;
+                    numCtrl.setAttribute("class", "form-range");
+                    numCtrl.setAttribute("type", "range");
+                    numCtrl.addEventListener("input", (event) => {
+                        valOutput.value = event.target.value;
+                    });
+                }else{
+                    numCtrl.setAttribute("class", "form-control");
+                    numCtrl.setAttribute("type", "number");
+                }
+            }
+        }
+
+        return bDiv;
+    }
+
+    function checkForm(){
+        return document.getElementById("cfgForm").checkValidity();
+    }
+
+    function sendForm(){
+        console.log("Submit");
+        var inputs = document.forms["cfgForm"].getElementsByTagName("input");
+        var postData = {};
+        var fxData = {};
+        postData[document.getElementById("fxSelect").value] = fxData;
+        Array.prototype.slice.call(inputs)
+            .forEach(function (input) {
+                if(input.type == "checkbox"){
+                    fxData[input.id] = input.checked ? true : false;
+                }else if((input.type == "text") /*&& input.value*/){
+                    if(input.inputMode == "numeric"){
+                        fxData[input.id] = parseInt(input.value);
+                    }else{
+                        fxData[input.id] = input.value;
+                    }
+                }else if(input.type == "number"){
+                        fxData[input.id] = input.valueAsNumber;
+                }else if(input.type == "range"){
+                        fxData[input.id] = input.valueAsNumber;
+                }
+            });
+        console.log(JSON.stringify(postData));
+
+        fetch("/api/fxConfig", {
+            method: "POST",
+            body: JSON.stringify(postData),
+            headers: {
+                "Content-type": "application/json; charset=UTF-8"
+            }
+        }).then((response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then((data) => {
+            // document.location = "/";
+            return;
+        })
+        .catch((error) => {
+            console.error('Fetch error:', error);
+        });
+    }
+
+    loadConfiguration();
+    (() => {
+        'use strict'
+        document.getElementById("cfgForm").addEventListener('submit', event => {
+            console.log("Sending form");
+            if (checkForm()) {
+                sendForm();
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            }, false);
+        })()
+</script>
+</html>

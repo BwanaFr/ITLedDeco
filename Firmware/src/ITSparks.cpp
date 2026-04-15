@@ -34,7 +34,7 @@ fl::string ITSparks::fxName() const
     return "ITSparks";
 }
 
-void ITSparks::getConfiguration(JsonObject& obj) const
+void ITSparks::getCustomConfiguration(JsonObject& obj) const
 {
     createSetting<int>(obj, "sparks", "Sparks count", nbSparks_, 0, 20);
     createSetting<int>(obj, "rate", "Generation rate [ms]", rate_, 0);

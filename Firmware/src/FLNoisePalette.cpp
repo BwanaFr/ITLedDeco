@@ -16,7 +16,7 @@ void FLNoisePalette::beforeDraw()
     }
 }
 
-void FLNoisePalette::getConfiguration(JsonObject& obj) const
+void FLNoisePalette::getCustomConfiguration(JsonObject& obj) const
 {
     createSetting<fl::u32>(obj, "changeTime", "Palette change time [ms]", changePaletteTime_, 0);
 }

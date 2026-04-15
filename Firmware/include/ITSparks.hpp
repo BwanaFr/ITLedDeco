@@ -12,7 +12,7 @@ public:
     virtual void draw(fl::Fx::DrawContext context) override;
     virtual fl::string fxName() const override;
 
-    virtual void getConfiguration(JsonObject& obj) const override;
+    virtual void getCustomConfiguration(JsonObject& obj) const override;
 private:
 
     fl::u16 nbSparks_;  //!<< Number of sparks
