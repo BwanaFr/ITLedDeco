@@ -20,10 +20,19 @@ void LedFXManager::draw(fl::span<CRGB> outputBuffer, fl::audio::Reactive* audior
     LedFX* currLedFX = fxMap_[currId];
     if(audioreactive){
         currLedFX->audioReactive(*audioreactive);
+        //Feed audio for requesting FX
+        for(FXMap::iterator it=fxMap_.begin();it!=fxMap_.end();++it){
+            if(it->second != currLedFX){
+                if(it->second->needAudio()){
+                    it->second->audioReactive(*audioreactive);
+                }
+            }
+        }
     }
     currLedFX->beforeDraw();
 
     fxEngine_.draw(fl::millis(), outputBuffer);
+
     //Maybe it's time to switch
     if(autoChange_ && (millis() >= (lastChange_ + currLedFX->getDisplayPeriod()))){
         nextFX();

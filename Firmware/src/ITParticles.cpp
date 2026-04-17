@@ -6,7 +6,7 @@ ITParticles::ITParticles(fl::u16 num_leds, fl::u8 max_particles, fl::u8 fade_rat
             LedFX{this},
             subStrips_{fl::Particles1d(LETTER_WIDTH, max_particles, fade_rate), fl::Particles1d(LETTER_HEIGHT, max_particles, fade_rate),
                         fl::Particles1d(LETTER_WIDTH, max_particles, fade_rate), fl::Particles1d(LETTER_HEIGHT, max_particles, fade_rate), fl::Particles1d(LETTER_WIDTH, max_particles, fade_rate)},
-            nbParticules_{max_particles}
+            nbParticules_{max_particles}, audioReactive_{true}, spawnTime_{200}, lastSpawn_{0}, lifetime_{4000}, speed_{100}, fadeRate_{2}
 {
     for(fl::Particles1d& p : subStrips_){
         p.setCyclical(false);
@@ -70,14 +70,46 @@ void ITParticles::spawnRandomParticle()
 
 void ITParticles::getCustomConfiguration(JsonObject& obj) const
 {
-    createSetting(obj, "reactive", "Music reactive?", true);
+    createSetting(obj, "reactive", "Music reactive?", audioReactive_);
     createSetting<fl::u8>(obj, "maxParts", "Maximum particules", nbParticules_, 0);
+    createSetting<fl::u32>(obj, "spawnTime", "Spawn every (if not reactive) [ms]", spawnTime_, 0);
+    createSetting<fl::u16>(obj, "lifeTime", "Particule life time [ms]", lifetime_, 0);
+    createSetting(obj, "speed", "Speed multiplier", speed_, 0, 200);
+    createSetting<fl::u8>(obj, "fadeRate", "Fade rate", fadeRate_, 0, 255);
+}
+
+bool ITParticles::setCustomConfiguration(JsonObjectConst obj)
+{
+    setValueIfSet(obj, "reactive", audioReactive_);
+    setValueIfSet(obj, "maxParts", nbParticules_);
+    setValueIfSet(obj, "spawnTime", spawnTime_);
+    if(setValueIfSet(obj, "lifeTime", lifetime_)){
+        setLifetime(lifetime_);
+    }
+    if(setValueIfSet(obj, "speed", speed_)){
+        float fSpeed = speed_/100.0f;
+        setSpeed(fSpeed);
+    }
+    if(setValueIfSet(obj, "fadeRate", fadeRate_)){
+        setFadeRate(fadeRate_);
+    }
+    return true;
 }
 
 void ITParticles::audioReactive(fl::audio::Reactive& reactive)
 {
-    //Spwan a random particule when a beat is detected
-    if(reactive.isBeat()){
+    if(audioReactive_){
+        //Spwan a random particule when a beat is detected
+        if(reactive.isBeat()){
+            spawnRandomParticle();
+        }
+    }
+}
+
+void ITParticles::beforeDraw()
+{
+    if(!audioReactive_ && (millis() - lastSpawn_) >= spawnTime_){
         spawnRandomParticle();
+        lastSpawn_ = millis();
     }
 }

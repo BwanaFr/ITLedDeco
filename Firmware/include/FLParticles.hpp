@@ -9,7 +9,7 @@ class FLParticles : public LedFX
 public:
     FLParticles(fl::u16 nbLeds, fl::u8 max_particles = 4);
     virtual ~FLParticles() = default;
-    void beforeDraw();
+    void beforeDraw() override;
     void getCustomConfiguration(JsonObject& obj) const override;
     bool setCustomConfiguration(JsonObjectConst obj) override;
 private:

@@ -94,6 +94,8 @@ void fastLedTask(void* param){
     bool lastBtn = true;
     bool btnUsed = false;
 
+    unsigned long lastSample = ::micros();
+
     while(true){
         fl::audio::Sample sample;
         //Get audio samples
@@ -106,12 +108,6 @@ void fastLedTask(void* param){
             //Audio reactive
             audioReactive.processSample(sample);
         }
-
-        // EVERY_N_MILLISECONDS(10000) {
-        //     noisePalette.changeToRandomPalette();
-        //     ITVuMeter.setRandomPalette();
-        // }
-
 
         bool btnState = ::digitalRead(BTN_PIN);
         if(!btnState && (btnState != lastBtn)){

@@ -45,3 +45,8 @@ void LedFX::audioReactive(fl::audio::Reactive& reactive)
 void LedFX::beforeDraw()
 {
 }
+
+bool LedFX::needAudio()
+{
+    return false;
+}

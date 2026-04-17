@@ -52,9 +52,18 @@ public:
      */
     void getCustomConfiguration(JsonObject& obj) const override;
 
+    bool setCustomConfiguration(JsonObjectConst obj) override;
+
     void audioReactive(fl::audio::Reactive& reactive) override;
 
+    void beforeDraw() override;
 private:
     std::array<fl::Particles1d, 5> subStrips_;
     fl::u8 nbParticules_;
+    bool audioReactive_;
+    fl::u32 spawnTime_;
+    fl::u32 lastSpawn_;
+    fl::u16 lifetime_;
+    int speed_;
+    fl::u8 fadeRate_;
 };

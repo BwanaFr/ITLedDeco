@@ -13,9 +13,13 @@ public:
     virtual fl::string fxName() const override;
 
     virtual void getCustomConfiguration(JsonObject& obj) const override;
+    bool setCustomConfiguration(JsonObjectConst obj) override;
 private:
 
-    fl::u16 nbSparks_;  //!<< Number of sparks
-    fl::u16 rate_;      //!<< Sparks generation rate [ms]
-    fl::u32 lastGen_;   //!<< Last time sparks was generated
+    fl::u16 nbSparks_;      //!<< Number of sparks
+    fl::u16 rate_;          //!<< Sparks generation rate [ms]
+    fl::u32 lastGen_;       //!<< Last time sparks was generated
+    fl::u8 randomLight_;    //!<< Random light amount
+    fl::u8 fadeRate_;       //!< Fade rate
+    fl::u8 baseLight_;      //!< Base light
 };

@@ -76,6 +76,12 @@ public:
      * Just called before the draw method of the Fx
      */
     virtual void beforeDraw();
+
+    /**
+     * Gets if the FX needs audio
+     * @return true if the FX needs audio
+     */
+    virtual bool needAudio();
 protected:
 
     virtual void getCustomConfiguration(JsonObject& obj) const;
