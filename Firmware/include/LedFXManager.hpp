@@ -40,8 +40,9 @@ public:
 
     /**
      * Sets FX configuration(s)
+     * @return true if configuration is changed
      */
-    void setFXConfigurations(const JsonDocument& doc);
+    bool setFXConfigurations(const JsonDocument& doc);
 
 private:
     fl::FxEngine fxEngine_;

@@ -76,7 +76,7 @@ CRGB leds[SCREEN_WIDTH * SCREEN_HEIGHT + 1];    //Do we need to allocate all 2D 
 XYMap xymap = XYMap::constructWithUserFunction(SCREEN_WIDTH, SCREEN_HEIGHT, IT::itUserMapFunc);
 
 ITSparks sparks(xymap);
-FLParticles particles(NB_STRIP_LEDS, 2, 2);
+FLParticles particles(NB_STRIP_LEDS, 2);
 FLNoisePalette noisePalette(xymap);
 ITVuMeter itVuMeter(xymap);
 ITParticles itParticles(NB_STRIP_LEDS + 1, 5);

@@ -101,7 +101,7 @@
             chkBox.setAttribute("class", "form-check-input");
             chkBox.setAttribute("type", "checkbox");
             chkBox.setAttribute("id", name);
-            chkBox.setAttribute("checked", el);
+            chkBox.checked = el;
             chkDiv.appendChild(chkBox);
         }else if(typeof(el) === "object"){
             let lblDiv = document.createElement("div");
@@ -142,6 +142,16 @@
                     numCtrl.setAttribute("class", "form-control");
                     numCtrl.setAttribute("type", "number");
                 }
+            }else if(typeof(val) === "boolean"){
+                let chkDiv = document.createElement("div");
+                chkDiv.setAttribute("class", "col-auto");
+                bDiv.appendChild(chkDiv);
+                let chkBox = document.createElement("input");
+                chkBox.setAttribute("class", "form-check-input");
+                chkBox.setAttribute("type", "checkbox");
+                chkBox.setAttribute("id", name);
+                chkBox.checked = el["val"];
+                chkDiv.appendChild(chkBox);
             }
         }
 

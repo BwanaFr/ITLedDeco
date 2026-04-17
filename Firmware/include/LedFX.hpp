@@ -82,8 +82,9 @@ protected:
 
     /**
      * Sets configuration for the FX
+     * @return true when setting accepted
      */
-    virtual void setCustomConfiguration(const JsonObject& obj);
+    virtual bool setCustomConfiguration(JsonObjectConst obj);
 
 //Several helpers to create settings in the JSON object
     /**
@@ -115,6 +116,15 @@ protected:
         JsonObject o = createSetting<T>(obj, name, desc, val, min);
         o["max"] = max;
         return o;
+    }
+
+    template<typename T>
+    static bool setValueIfSet(JsonObjectConst obj, const char* name, T& val){
+        if(obj[name].is<T>()){
+            val = obj[name].as<T>();
+            return true;
+        }
+        return false;
     }
 
 

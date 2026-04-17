@@ -32,7 +32,16 @@ void LedFXManager::draw(fl::span<CRGB> outputBuffer, fl::audio::Reactive* audior
 
 void LedFXManager::registerFx(LedFX* fx)
 {
-    int index = fxEngine_.addFx(*fx->getFX());
+    if(!fx){
+        ESP_LOGE(TAG, "Can't register null LedFX!");
+        return;
+    }
+    fl::Fx* flFx = fx->getFX();
+    if(!flFx){
+        ESP_LOGE(TAG, "Can't register LedFx with null FX!");
+        return;
+    }
+    int index = fxEngine_.addFx(*flFx);
     if(index > -1){
         fxMap_[index] = fx;
     }
@@ -67,10 +76,12 @@ void LedFXManager::getFXConfigurations(JsonDocument& doc) const
     }
 }
 
-void LedFXManager::setFXConfigurations(const JsonDocument& doc)
+bool LedFXManager::setFXConfigurations(const JsonDocument& doc)
 {
-    for(FXMap::const_iterator it=fxMap_.begin(); it != fxMap_.end(); ++it){
+    bool changed = false;
+    for(FXMap::iterator it=fxMap_.begin(); it != fxMap_.end(); ++it){
         LedFX* fx = it->second;
-        fx->setConfiguration(doc);
+        changed |= fx->setConfiguration(doc);
     }
+    return changed;
 }

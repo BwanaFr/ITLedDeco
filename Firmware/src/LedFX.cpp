@@ -9,7 +9,7 @@ LedFX::LedFX(fl::Fx* fx, unsigned long displayPeriod, unsigned long transitionTi
 void LedFX::getConfiguration(JsonDocument& doc) const
 {
     JsonObject obj = doc[getFX()->fxName()].to<JsonObject>();
-    obj["enabled"] = isEnabled();
+    obj["Enabled"] = isEnabled();
     createSetting<fl::u32>(obj, "transitionTime", "FX transition time [ms]", transitionTime_, 0);
     createSetting<fl::u32>(obj, "displayTime", "FX display time [ms]", displayPeriod_, 0);
     getCustomConfiguration(obj);
@@ -19,18 +19,23 @@ void LedFX::getCustomConfiguration(JsonObject& obj) const
 {
 }
 
-void LedFX::setCustomConfiguration(const JsonObject& obj)
+bool LedFX::setCustomConfiguration(JsonObjectConst obj)
 {
+    return true;
 }
 
-bool LedFX::setConfiguration(const JsonDocument& obj)
+bool LedFX::setConfiguration(const JsonDocument& doc)
 {
-    if(obj[getFX()->fxName()].is<JsonObject>()){
-        JsonObject obj = obj[getFX()->fxName()].as<JsonObject>();
-        if(obj["enabled"].is<bool>()){
-            setEnabled(obj["enabled"].as<bool>());
-        }
+    bool ret = true;
+    const std::string fxName = getFX()->fxName().c_str();
+    if(doc[fxName].is<JsonObjectConst>()){
+        JsonObjectConst obj = doc[fxName].as<JsonObjectConst>();
+        setValueIfSet(obj, "Enabled", enabled_);
+        setValueIfSet(obj, "transitionTime", transitionTime_);
+        setValueIfSet(obj, "displayTime", displayPeriod_);
+        return setCustomConfiguration(obj);
     }
+    return true;    //Accept setting...
 }
 
 void LedFX::audioReactive(fl::audio::Reactive& reactive)
