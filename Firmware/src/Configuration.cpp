@@ -6,6 +6,8 @@
 #include "mbedtls/aes.h"
 #include "mbedtls/cipher.h"
 
+#include <LedFXManager.hpp>
+
 #define DEFAULT_AP_SSID "IT_Leds"
 #define DEFAULT_AP_PASS "12345678"
 
@@ -17,13 +19,17 @@
 
 #define FLASH_SAVE_DELAY 2000
 #define CFG_FILENAME "/config.json"
+#define FX_CFG_FILENAME "/fx_config.json"
 
 static const char* TAG = "Configuration";
+
+//TODO: Ugly, needs to be changed
+extern LedFXManager fxManager;
 
 DeviceConfiguration configuration;
 
 DeviceConfiguration::DeviceConfiguration() :
-        lastChange_{0}, mutexData_{nullptr}, mutexListeners_{nullptr},
+        lastChange_{0}, lastFxChange_{0}, mutexData_{nullptr}, mutexListeners_{nullptr},
         apSSID_{DEFAULT_AP_SSID}, apPass_{DEFAULT_AP_PASS},
         staSSID_{DEFAULT_STA_SSID}, staPass_{DEFAULT_STA_PASS},
         staIP_{DEFAULT_STA_IP}, staSubnet_{DEFAULT_STA_SUBNET},
@@ -78,7 +84,7 @@ void DeviceConfiguration::load()
         JsonDocument json;
         if(deserializeJson(json, configFile) == DeserializationError::Ok) {
             bool valid, changed;
-            fromJSON(json, changed, valid, true, true);            
+            fromJSON(json, changed, valid, true, true);
             if(xSemaphoreTake(mutexData_, portMAX_DELAY ) == pdTRUE)
             {
                 lastChange_ = 0;        //Don't write to flash
@@ -127,12 +133,12 @@ void DeviceConfiguration::fromJSON(const JsonDocument& doc, bool& changed, bool&
         changed |= setStationSSID(doc["staSSID"].as<std::string>(), pass, forceNotification);
         valid = true;
     }
-    
+
     //WiFi STA
     if(doc["staIP"].is<std::string>()){
         IPAddress staIP;
         staIP.fromString(doc["staIP"].as<std::string>().c_str());
-        
+
         IPAddress staSub(staSubnet_);
         if(doc["staSubnet"].is<std::string>()){
             staSub.fromString(doc["staSubnet"].as<std::string>().c_str());
@@ -246,6 +252,7 @@ void DeviceConfiguration::loop()
 {
     vTaskDelay(pdMS_TO_TICKS(FLASH_SAVE_DELAY));
     bool doWrite = false;
+    bool doFxWrite = false;
     if(xSemaphoreTake(mutexData_, 0) == pdTRUE)
     {
         if(lastChange_ != 0){
@@ -253,6 +260,11 @@ void DeviceConfiguration::loop()
             doWrite = true;
             lastChange_ = 0;
         }
+        if(lastFxChange_ != 0){
+            doFxWrite = true;
+            lastFxChange_ = 0;
+        }
+
         xSemaphoreGive(mutexData_);
     }
 
@@ -260,10 +272,16 @@ void DeviceConfiguration::loop()
         write();
     }
 
+    if(doFxWrite){
+        JsonDocument doc;
+        fxManager.getFXConfigurations(doc);
+        saveFXConfiguration(doc);
+    }
+
     bool suspend = false;
     if(xSemaphoreTake(mutexData_, 0) == pdTRUE)
     {
-        suspend = (lastChange_ == 0);
+        suspend = (lastChange_ == 0) && (lastFxChange_ == 0);
         xSemaphoreGive(mutexData_);
     }
     if(suspend){
@@ -409,4 +427,33 @@ std::string DeviceConfiguration::decrypt(const std::string& input)
 	mbedtls_aes_free(&aes);
     ret.resize(strlen(ret.c_str()));
     return ret;
+}
+
+void DeviceConfiguration::saveFXConfiguration(const JsonDocument& doc)
+{
+    ESP_LOGI(TAG, "Saving FX configuration to flash");
+    File cfgFile = LittleFS.open(FX_CFG_FILENAME, "w");
+    serializeJson(doc, cfgFile);
+    cfgFile.close();
+    std::string str;
+    serializeJson(doc, str);
+    ESP_LOGI(TAG, "%s", str.c_str());
+}
+
+void DeviceConfiguration::loadFXConfiguration(JsonDocument& doc)
+{
+    File configFile = LittleFS.open(FX_CFG_FILENAME, "r");
+    if(configFile){
+        if(deserializeJson(doc, configFile) != DeserializationError::Ok) {
+            ESP_LOGE(TAG, "Unable to parse FX configuration file");
+        }
+        configFile.close();
+    }
+}
+
+void DeviceConfiguration::saveFXConfiguration()
+{
+    lastFxChange_ = millis();
+    //Wakeup to flash write task
+    vTaskResume(configTask_);
 }

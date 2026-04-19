@@ -42,7 +42,7 @@ public:
      * Sets FX configuration(s)
      * @return true if configuration is changed
      */
-    bool setFXConfigurations(const JsonDocument& doc);
+    bool setFXConfigurations(const JsonDocument& doc, bool save = true);
 
 private:
     fl::FxEngine fxEngine_;

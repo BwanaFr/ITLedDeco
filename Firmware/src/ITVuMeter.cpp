@@ -141,10 +141,10 @@ bool ITVuMeter::setCustomConfiguration(JsonObjectConst obj)
 
 void ITVuMeter::beforeDraw()
 {
-    if((fl::millis() - lastPaletteChange_) >= paletteChangeRate_){
-        setRandomPalette();
-        lastPaletteChange_ = fl::millis();
-    }
+    // if((fl::millis() - lastPaletteChange_) >= paletteChangeRate_){
+    //     setRandomPalette();
+    //     lastPaletteChange_ = fl::millis();
+    // }
 }
 
 void ITVuMeter::audioReactive(fl::audio::Reactive& reactive)

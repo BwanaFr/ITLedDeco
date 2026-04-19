@@ -115,8 +115,12 @@ public:
      */
     void registerListener(ParameterListener listener);
 
+    void saveFXConfiguration();
+    void loadFXConfiguration(JsonDocument& doc);
+
 private:
     unsigned long lastChange_;                  //!< Last change of one setting
+    unsigned long lastFxChange_;                //!< Last change of one FX setting
     SemaphoreHandle_t mutexData_;               //!< Protect access to ressources
     SemaphoreHandle_t mutexListeners_;          //!< Protect access to listeners vector
     std::string apSSID_;                        //!< AP SSID
@@ -150,6 +154,7 @@ private:
     static std::string decrypt(const std::string& input);
     static void generateKeys(unsigned char iv[16], unsigned char key[128]);
     static void configTask(void* param);
+    void saveFXConfiguration(const JsonDocument& doc);
 };
 
 extern DeviceConfiguration configuration;

@@ -1,6 +1,7 @@
 #include <LedFXManager.hpp>
 #include <Arduino.h>
 #include "esp_log.h"
+#include <Configuration.hpp>
 
 const char* TAG = "LedFXManager";
 
@@ -85,12 +86,15 @@ void LedFXManager::getFXConfigurations(JsonDocument& doc) const
     }
 }
 
-bool LedFXManager::setFXConfigurations(const JsonDocument& doc)
+bool LedFXManager::setFXConfigurations(const JsonDocument& doc, bool save)
 {
     bool changed = false;
     for(FXMap::iterator it=fxMap_.begin(); it != fxMap_.end(); ++it){
         LedFX* fx = it->second;
         changed |= fx->setConfiguration(doc);
+    }
+    if(changed && save){
+        configuration.saveFXConfiguration();
     }
     return changed;
 }

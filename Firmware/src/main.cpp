@@ -211,6 +211,11 @@ void setup()
 
     audioReactive.begin(reactConfig);
 
+    //Loads FX configuration
+    JsonDocument doc;
+    configuration.loadFXConfiguration(doc);
+    fxManager.setFXConfigurations(doc, false);
+
     //Create the FreeRTOS OS with a stack of 16KB
     xTaskCreate(fastLedTask, "FastLed", 16*1024, nullptr, 1, NULL);
 }
