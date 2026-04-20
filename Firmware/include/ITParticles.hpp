@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <FastLED.h>
 #include <fl/fx/1d/particles.h>
 #include <LedFX.hpp>
 

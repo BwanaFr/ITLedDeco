@@ -1,5 +1,6 @@
 #pragma once
 
+#include <FastLED.h>
 #include "fl/fx/fx2d.h"
 #include <LedFX.hpp>
 
@@ -22,4 +23,5 @@ private:
     fl::u8 randomLight_;    //!<< Random light amount
     fl::u8 fadeRate_;       //!< Fade rate
     fl::u8 baseLight_;      //!< Base light
+    fl::u8 blurAmount_;     //!< Blur amount
 };

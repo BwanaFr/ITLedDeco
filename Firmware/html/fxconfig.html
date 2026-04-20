@@ -84,26 +84,7 @@
     function createFormControl(el, name){
         const bDiv = document.createElement("div");
         bDiv.setAttribute("class", "row align-items-center");
-        if(typeof(el) == "boolean"){
-            let lblDiv = document.createElement("div");
-            lblDiv.setAttribute("class", "col-auto");
-            bDiv.appendChild(lblDiv);
-            let chkLabel = document.createElement("label");
-            chkLabel.setAttribute("class", "col-form-label");
-            chkLabel.setAttribute("for", name);
-            chkLabel.append(name + " ?");
-            lblDiv.appendChild(chkLabel);
-
-            let chkDiv = document.createElement("div");
-            chkDiv.setAttribute("class", "col-auto");
-            bDiv.appendChild(chkDiv);
-            let chkBox = document.createElement("input");
-            chkBox.setAttribute("class", "form-check-input");
-            chkBox.setAttribute("type", "checkbox");
-            chkBox.setAttribute("id", name);
-            chkBox.checked = el;
-            chkDiv.appendChild(chkBox);
-        }else if(typeof(el) === "object"){
+        if(typeof(el) === "object"){
             let lblDiv = document.createElement("div");
             lblDiv.setAttribute("class", "col-auto");
             bDiv.appendChild(lblDiv);
@@ -170,18 +151,19 @@
         postData[document.getElementById("fxSelect").value] = fxData;
         Array.prototype.slice.call(inputs)
             .forEach(function (input) {
+                fxData[input.id] = {};
                 if(input.type == "checkbox"){
-                    fxData[input.id] = input.checked ? true : false;
+                    fxData[input.id]["val"] = input.checked ? true : false;
                 }else if((input.type == "text") /*&& input.value*/){
                     if(input.inputMode == "numeric"){
-                        fxData[input.id] = parseInt(input.value);
+                        fxData[input.id]["val"] = parseInt(input.value);
                     }else{
-                        fxData[input.id] = input.value;
+                        fxData[input.id]["val"] = input.value;
                     }
                 }else if(input.type == "number"){
-                        fxData[input.id] = input.valueAsNumber;
+                        fxData[input.id]["val"] = input.valueAsNumber;
                 }else if(input.type == "range"){
-                        fxData[input.id] = input.valueAsNumber;
+                        fxData[input.id]["val"] = input.valueAsNumber;
                 }
             });
         console.log(JSON.stringify(postData));

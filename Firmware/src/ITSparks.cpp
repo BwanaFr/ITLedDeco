@@ -2,13 +2,12 @@
 #include "ITSparks.hpp"
 #include "ITLedMap.hpp"
 
-#define BLUR_AMOUNT 2
-
 ITSparks::ITSparks(const fl::XYMap &xymap) :
     fl::Fx2d(xymap),
     LedFX{this},
     nbSparks_{10}, rate_{100}, lastGen_{0},
-    randomLight_{20}, fadeRate_{20}, baseLight_{4}
+    randomLight_{20}, fadeRate_{20}, baseLight_{4},
+    blurAmount_{2}
 {
 }
 
@@ -21,9 +20,10 @@ void ITSparks::draw(fl::Fx::DrawContext context)
             context.leds[index] = CRGB::White;
             context.leds[index].fadeLightBy(random8(randomLight_));
         }
-        // blur2d(context.leds, getWidth(), getHeight(), BLUR_AMOUNT, getXYMap());
+
         lastGen_ = context.now;
     }
+    blur2d(context.leds, getWidth(), getHeight(), blurAmount_, getXYMap());
     fadeToBlackBy(context.leds, fadeRate_);
     for(int i=0;i<NB_STRIP_LEDS;++i){
         context.leds[i].addToRGB(baseLight_);
@@ -42,6 +42,7 @@ void ITSparks::getCustomConfiguration(JsonObject& obj) const
     createSetting<fl::u8>(obj, "rndLight", "Random fade", randomLight_, 0, 255);
     createSetting<fl::u8>(obj, "fadeRate", "Fade rate", fadeRate_, 0, 255);
     createSetting<fl::u8>(obj, "baseLight", "Base light", baseLight_, 0, 255);
+    createSetting<fl::u8>(obj, "blur", "Blur amount", blurAmount_, 0, 255);
 }
 
 bool ITSparks::setCustomConfiguration(JsonObjectConst obj)
@@ -51,5 +52,6 @@ bool ITSparks::setCustomConfiguration(JsonObjectConst obj)
     setValueIfSet(obj, "rndLight", randomLight_);
     setValueIfSet(obj, "fadeRate", fadeRate_);
     setValueIfSet(obj, "baseLight", baseLight_);
+    setValueIfSet(obj, "blur", blurAmount_);
     return true;
 }

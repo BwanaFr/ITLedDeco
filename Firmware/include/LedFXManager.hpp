@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <FastLED.h>
 #include <LedFX.hpp>
 #include <fl/fx/fx_engine.h>
 #include <fl/audio/audio_reactive.h>

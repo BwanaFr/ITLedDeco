@@ -67,6 +67,11 @@ void LedFXManager::nextFX()
                 //Loop
                 curId = 0;
             }
+            if(curId == fxEngine_.getCurrentFxId()){
+                ESP_LOGI(TAG, "No next FX to display.");
+                lastChange_ = millis();
+                break;
+            }
             LedFX* nextFx = fxMap_[curId];
             if(nextFx->isEnabled()){
                 ESP_LOGI(TAG, "NextFX -> %s", nextFx->getFX()->fxName().c_str());
@@ -95,6 +100,11 @@ bool LedFXManager::setFXConfigurations(const JsonDocument& doc, bool save)
     }
     if(changed && save){
         configuration.saveFXConfiguration();
+    }
+    //Switch FX if actual is disabled (by config)
+    int curId = fxEngine_.getCurrentFxId();
+    if(!fxMap_[curId]->isEnabled()){
+        nextFX();
     }
     return changed;
 }

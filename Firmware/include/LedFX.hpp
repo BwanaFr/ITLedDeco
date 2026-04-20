@@ -1,5 +1,6 @@
 #pragma once
 
+#include <FastLED.h>
 #include <fl/fx/fx.h>
 #include <ArduinoJson.h>
 #include <fl/audio/audio_reactive.h>
@@ -126,13 +127,15 @@ protected:
 
     template<typename T>
     static bool setValueIfSet(JsonObjectConst obj, const char* name, T& val){
-        if(obj[name].is<T>()){
-            val = obj[name].as<T>();
-            return true;
+        JsonObjectConst v = obj[name];
+        if(v){
+            if(v["val"].is<T>()){
+                val = v["val"].as<T>();
+                return true;
+            }
         }
         return false;
     }
-
 
 private:
     fl::Fx* fx_;

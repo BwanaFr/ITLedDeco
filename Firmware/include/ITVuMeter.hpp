@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FastLED.h"
+#include <FastLED.h>
 #include "fl/fx/fx2d.h"
 #include <LedFX.hpp>
 #include <array>
@@ -26,34 +26,29 @@ private:
     fl::u32 paletteChangeRate_;             //!<< Random palette change
     fl::u32 lastPaletteChange_;             //!<< Last random palette change
     float level_;                           //!<< Current step
+    float levelGain_;                       //!<< Level gain
     fl::u8 fadeRate_;                       //!<< LED fade rate
     int currentPalette_;                    //!<< Current palette index
-    fl::CRGBPalette16 grayAndWhitePal_;     //!<< Gray and white palette
-    fl::CRGBPalette16 purpleAndGreenPal_;   //!<< Purple and green palette
-    static constexpr int MAX_PALETTE = 8;
+    static constexpr int MAX_PALETTE = 6;
 
     struct PaletteInfo{
         bool enabled;
-        const fl::CRGBPalette16& palette;
+        const TProgmemRGBPalette16* palette;
         std::string name;
 
-        PaletteInfo(bool en, const fl::CRGBPalette16& pal, const std::string& name) :
+        PaletteInfo(bool en, const TProgmemRGBPalette16* pal, const std::string& name) :
                     enabled{en}, palette{pal}, name{name}
         {}
 
-        PaletteInfo(const fl::CRGBPalette16& pal, const std::string& name) :
+        PaletteInfo(const TProgmemRGBPalette16* pal, const std::string& name) :
                     enabled{true}, palette{pal}, name{name}
         {}
     };
     std::array<PaletteInfo, MAX_PALETTE> palettes_;
 
-    void SetupGrayAndWhiteStripedPalette();
-
-    void SetupPurpleAndGreenPalette();
-
     int getNbEnabledPalette();
 
-    std::array<float, 10> energyMax_;
+    std::array<float, 50> energyMax_;
     int energyCell_;
     int lastEnergyChange_;
 };

@@ -435,9 +435,9 @@ void DeviceConfiguration::saveFXConfiguration(const JsonDocument& doc)
     File cfgFile = LittleFS.open(FX_CFG_FILENAME, "w");
     serializeJson(doc, cfgFile);
     cfgFile.close();
-    std::string str;
-    serializeJson(doc, str);
-    ESP_LOGI(TAG, "%s", str.c_str());
+    // std::string str;
+    // serializeJson(doc, str);
+    // ESP_LOGI(TAG, "%s", str.c_str());
 }
 
 void DeviceConfiguration::loadFXConfiguration(JsonDocument& doc)

@@ -38,12 +38,6 @@
 
 using namespace fl;
 
-
-//Flag to know if we are in simulation mode
-// #ifdef __EMSCRIPTEN__
-//#define FS_WASM 1
-// #endif
-
 #define DATA_PIN_I 45
 #define DATA_PIN_T 46
 #define DATA_PIN_ONBOARD 33
@@ -156,7 +150,7 @@ void setup()
     //Internal led to show beat detection
     FastLED.addLeds<SK6812, DATA_PIN_ONBOARD, GRB>(&onBoardLed, 1);
 
-    FastLED.setBrightness(64);
+    // FastLED.setBrightness(64);
 
     fxManager.registerFx(&noisePalette);
     fxManager.registerFx(&particles);
