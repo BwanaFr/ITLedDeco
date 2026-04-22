@@ -108,3 +108,30 @@ bool LedFXManager::setFXConfigurations(const JsonDocument& doc, bool save)
     }
     return changed;
 }
+
+const LedFX* LedFXManager::getCurrentFX() const
+{
+    const int curId = fxEngine_.getCurrentFxId();
+    FXMap::const_iterator it = fxMap_.find(curId);
+    if(it != fxMap_.end()){
+        return it->second;
+    }
+    return nullptr;
+}
+
+bool LedFXManager::getFXInfos(std::string& actualName, unsigned long& nextInMs, unsigned long& dispUntilMs) const
+{
+    unsigned long now = millis();
+    const LedFX* currLedFX = getCurrentFX();
+    if(currLedFX){
+        actualName = currLedFX->getFX()->fxName().c_str();
+        dispUntilMs = now - lastChange_;
+        if(isAutoChange()){
+            nextInMs = currLedFX->getDisplayPeriod() - dispUntilMs;
+        }else{
+            nextInMs = 0;
+        }
+        return true;
+    }
+    return false;
+}

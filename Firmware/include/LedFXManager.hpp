@@ -45,6 +45,19 @@ public:
      */
     bool setFXConfigurations(const JsonDocument& doc, bool save = true);
 
+    /**
+     * Gets current Fx pointer
+     * @return Const pointer to actual LedFX or nullptr if no FX?
+     */
+    const LedFX* getCurrentFX() const;
+
+    /**
+     * Get actual FX timing
+     * @param nextInMs Milliseconds to next FX change
+     * @param dispUntilMs Milliseconds since display of the actual FX
+     */
+    bool getFXInfos(std::string& actualName, unsigned long& nextInMs, unsigned long& dispUntilMs) const;
+
 private:
     fl::FxEngine fxEngine_;
     typedef std::map<int, LedFX*> FXMap;

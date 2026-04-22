@@ -37,6 +37,8 @@ const Webserver::HandlerMap Webserver::getHandlers = {
     {API_URI "config", Webserver::cfg_get_handler},
     {API_URI "tasks", Webserver::tasks_info_get_handler},
     {API_URI "fxConfig", Webserver::fx_cfg_get_handler},
+    {API_URI "status", Webserver::status_get_handler},
+    {API_URI "nextFX", Webserver::nextfx_get_handler},
 };
 
 Webserver webServer;
@@ -498,6 +500,38 @@ esp_err_t Webserver::fx_cfg_post_handler( httpd_req_t *req )
     return ESP_OK;
 }
 
+esp_err_t Webserver::status_get_handler(httpd_req_t *req )
+{
+    Webserver* instance = static_cast<Webserver*>(req->user_ctx);
+
+    httpd_resp_set_status( req, HTTPD_200 );
+    httpd_resp_set_hdr( req, "Connection", "keep-alive" );
+    httpd_resp_set_type(req, "application/json");
+    //Build a JSON with status info
+    JsonDocument doc;
+    unsigned long dispTime, nextTime;
+    std::string fxName;
+    if(fxManager.getFXInfos(fxName, nextTime, dispTime)){
+        doc["FXName"] = fxName;
+        doc["dispTime"] = dispTime;
+        if(fxManager.isAutoChange()){
+            doc["nextTime"] = nextTime;
+        }
+    }
+
+    //Serialize to string
+    std::string jsonStr;
+    serializeJson(doc, jsonStr);
+    httpd_resp_send( req, jsonStr.c_str(), jsonStr.length());
+    return ESP_OK;
+}
+
+esp_err_t Webserver::nextfx_get_handler(httpd_req_t *req )
+{
+    fxManager.nextFX();
+    httpd_resp_send( req, "FX changed", HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
 
 esp_err_t Webserver::not_found_handler( httpd_req_t *req )
 {

@@ -8,8 +8,21 @@
 <div class="container">
   <div class="row p-3"><h1 class="text-center">IT leds</h1></div>
   <div class="row align-items-center">
-    <div class="col"><div class="text-end fs-5">Actual FX</div></div>
-    <div class="col"><div class="badge text-start text-bg-light" id="currentFX">--</div></div>
+    <div class="col"><div class="text-end fs-3">Actual FX</div></div>
+    <div class="col"><h1><span class="badge text-start text-bg-light" id="currentFX">--</span></h1></div>
+  </div>
+  <div class="row align-items-center">
+    <div class="col"><div class="text-end fs-3">Next FX in </div></div>
+    <div class="col"><h2><span class="badge text-start text-bg-light" id="nextFXTime">--</span></h2></div>
+  </div>
+  <div class="row align-items-center">
+    <div class="col"><div class="text-end fs-3">FX displayed since </div></div>
+    <div class="col"><h2><span class="badge text-start text-bg-light" id="currFXTime">--</span></h2></div>
+  </div>
+  <div class="row align-items-center">
+    <div class="col"></div>
+    <button type="button" class="col btn btn-outline-primary" onclick="nextFx();" id="nextFXBtn">Next FX</button>
+    <div class="col"></div>
   </div>
 </div>
 <div class="container-fluid fixed-bottom text-center pb-1 bg-light">
@@ -58,6 +71,16 @@ function setBiColorValue(data, key, el, fn, hide){
     }
 }
 
+function nextFx(){
+    const req = new XMLHttpRequest();
+    req.open("GET",'/api/nextFX', true);
+    req.onload = function(){
+        document.getElementById("nextFXBtn").disabled = false;
+    };
+    document.getElementById("nextFXBtn").disabled = true;
+    req.send();
+}
+
 function fetchInfo(){
     const req = new XMLHttpRequest();
     req.open("GET",'/api/status',true);
@@ -66,16 +89,22 @@ function fetchInfo(){
         document.getElementById("currentFX").classList.remove('text-bg-danger');
         document.getElementById("currentFX").classList.add('text-bg-light');
         document.getElementById("currentFX").innerHTML = json["FXName"];
+        let nextTime = json["nextTime"]
+        if(nextTime){
+            document.getElementById("nextFXTime").innerHTML = Number.parseFloat((nextTime/1000.0)).toFixed(0) + " s";
+        }
+        document.getElementById("currFXTime").innerHTML = Number.parseFloat((json["dispTime"]/1000.0)).toFixed(0) + " s";
 
     };
     req.onerror = function(e) {
+        document.getElementById("currentFX").classList.remove('text-bg-light');
         document.getElementById("currentFX").classList.add('text-bg-danger');
         document.getElementById("currentFX").innerHTML = "Offline (network error)";
     };
     req.send();
+    setTimeout(fetchInfo, 1000);
 };
-
-setInterval(fetchInfo, 1000);
+fetchInfo();
 
 </script>
 
