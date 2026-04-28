@@ -45,10 +45,17 @@ using namespace fl;
 #define BTN_PIN 38
 
 // I2S pins for INMP441 microphone (adjust for your board)
-#define I2S_WS_PIN 37  // Word Select (LRCLK)
-#define I2S_SD_PIN 35  // Serial Data (DIN)
-#define I2S_CLK_PIN 36 // Serial Clock (BCLK)
-#define I2S_CHANNEL fl::audio::AudioChannel::Left
+#define MIC_I2S_WS_PIN 37  // Word Select (LRCLK)
+#define MIC_I2S_SD_PIN 35  // Serial Data (DIN)
+#define MIC_I2S_CLK_PIN 36 // Serial Clock (BCLK)
+#define MIC_I2S_CHANNEL fl::audio::AudioChannel::Left
+
+#define EXT_I2S_WS_PIN 4  // Word Select (LRCLK)
+#define EXT_I2S_SD_PIN 5  // Serial Data (DIN)
+#define EXT_I2S_CLK_PIN 6 // Serial Clock (BCLK)
+#define EXT_I2S_CHANNEL fl::audio::AudioChannel::Both
+
+
 
 static const char* TAG = "Main";
 
@@ -62,6 +69,7 @@ fl::audio::SignalConditioner sConditioner;
 fl::audio::AutoGain autoGain;
 //Audio reactive
 fl::audio::Reactive audioReactive;
+bool useExt = true;
 
 CRGB onBoardLed;
 
@@ -98,9 +106,12 @@ void fastLedTask(void* param){
             //Conditionner
             sample = sConditioner.processSample(sample);
             //Autogain
-            sample = autoGain.process(sample);
+            if(!useExt){
+                sample = autoGain.process(sample);
+            }
             //Audio reactive
             audioReactive.processSample(sample);
+            // Serial.printf("%f\n", audioReactive.getBassEnergy());
         }
 
         bool btnState = ::digitalRead(BTN_PIN);
@@ -125,7 +136,17 @@ void fastLedTask(void* param){
         }
 
         FastLED.show();
+        yield();
+        delay(1);
     }
+}
+
+fl::audio::Config createADCAudioConfig(){
+    fl::audio::ConfigI2S config(EXT_I2S_WS_PIN, EXT_I2S_SD_PIN, EXT_I2S_CLK_PIN, 0, EXT_I2S_CHANNEL, 48000,
+                         16, fl::audio::I2SCommFormat::Philips);
+    fl::audio::Config out(config);
+    out.setMicProfile(fl::audio::MicProfile::LineIn);
+    return out;
 }
 
 void setup()
@@ -160,8 +181,11 @@ void setup()
 
     //Enable audio
     // Create platform-specific audio configuration
-    fl::audio::Config config =  fl::audio::Config::CreateInmp441(I2S_WS_PIN, I2S_SD_PIN, I2S_CLK_PIN, I2S_CHANNEL);
-    config.setMicProfile(fl::audio::MicProfile::GenericMEMS);
+    fl::audio::Config config =  useExt ? createADCAudioConfig() :
+        fl::audio::Config::CreateInmp441(MIC_I2S_WS_PIN, MIC_I2S_SD_PIN, MIC_I2S_CLK_PIN, EXT_I2S_CHANNEL);
+    if(!useExt){
+        config.setMicProfile(fl::audio::MicProfile::GenericMEMS);
+    }
 
     // Initialize I2S Audio
     Serial.println("Initializing audio input...");
@@ -173,7 +197,7 @@ void setup()
         Serial.println(errorMsg.c_str());
         return;
     }
-    audioSource->setGain(2.0);
+    // audioSource->setGain(2.0);
     // Start audio capture
     Serial.println("Starting audio capture...");
     audioSource->start();
