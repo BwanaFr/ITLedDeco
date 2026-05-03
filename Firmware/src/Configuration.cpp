@@ -33,7 +33,8 @@ DeviceConfiguration::DeviceConfiguration() :
         apSSID_{DEFAULT_AP_SSID}, apPass_{DEFAULT_AP_PASS},
         staSSID_{DEFAULT_STA_SSID}, staPass_{DEFAULT_STA_PASS},
         staIP_{DEFAULT_STA_IP}, staSubnet_{DEFAULT_STA_SUBNET},
-        staGateway_{DEFAULT_STA_GATEWAY},
+        staGateway_{DEFAULT_STA_GATEWAY}, audioAutoGain_{true},
+        audioGain_{1.0f}, audioInput_{1},
         configTask_(nullptr)
 {
     mutexData_ = xSemaphoreCreateMutex();
@@ -151,6 +152,23 @@ void DeviceConfiguration::fromJSON(const JsonDocument& doc, bool& changed, bool&
         changed |= setStationIPConfiguration(staIP, staSub, staGw, forceNotification);
         valid = true;
     }
+
+    if(doc["inputAutoGain"] || doc["inputGain"] || doc["audioSource"]){
+        bool autoGain = audioAutoGain_;
+        float gain = audioGain_;
+        int inp = audioInput_;
+        if(doc["inputAutoGain"].is<bool>()){
+            autoGain = doc["inputAutoGain"].as<bool>();
+        }
+        if(doc["inputGain"].is<float>()){
+            gain = doc["inputGain"].as<float>();
+        }
+        if(doc["audioSource"].is<int>()){
+            inp = doc["audioSource"].as<int>();
+        }
+        changed |= setAudioConfiguration(inp, autoGain, gain);
+        valid = true;
+    }
 }
 
 bool DeviceConfiguration::setAPSSID(const std::string& ssid, const std::string& pass, bool forceNotification)
@@ -245,6 +263,39 @@ void DeviceConfiguration::getStationIPConfiguration(IPAddress& ip, IPAddress& su
     }
 }
 
+bool DeviceConfiguration::setAudioConfiguration(int source, bool autoGain, float gain, bool forceNotification)
+{
+    bool changed = false;
+    if(xSemaphoreTake(mutexData_, portMAX_DELAY ) == pdTRUE)
+    {
+        if((audioInput_ != source) || (autoGain != audioAutoGain_) || (gain != audioGain_))
+        {
+            audioInput_ = source;
+            audioAutoGain_ = autoGain;
+            audioGain_ = gain;
+            configurationChanged();
+            changed = true;
+        }
+        xSemaphoreGive(mutexData_);
+        if(changed || forceNotification){
+            notifyListeners(Parameter::AUDIO);
+        }
+    }
+    return changed;
+}
+
+
+void DeviceConfiguration::getAudioConfiguration(int& source, bool& autoGain, float& gain)
+{
+    if(xSemaphoreTake(mutexData_, portMAX_DELAY ) == pdTRUE)
+    {
+        source = audioInput_;
+        autoGain = audioAutoGain_;
+        gain = audioGain_;
+        xSemaphoreGive(mutexData_);
+    }
+}
+
 /**
  * Loop to delay flash writing
  */
@@ -325,6 +376,11 @@ void DeviceConfiguration::toJSON(JsonDocument& doc, bool includeSecrets)
             doc["apPass"] = std::string(apPass_.size(), ' ');
             doc["staPass"] = std::string(staPass_.size(), ' ');
         }
+
+        doc["inputAutoGain"] = audioAutoGain_;
+        doc["inputGain"] = audioGain_;
+        doc["audioSource"] = audioInput_;
+
         xSemaphoreGive(mutexData_);
     }
 }

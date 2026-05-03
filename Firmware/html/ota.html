@@ -11,7 +11,7 @@
 </style>
 </head>
 <body>
-<center><h1 id="devName">ESP32 UPS</h1></center>
+<center><h1 id="devName">IT leds Firmware update</h1></center>
 <link rel="stylesheet" href="bootstrap.min.css">
 <div class="well" style="text-align: center;">
   <div><button class="btn btn-primary" type="button" onclick="file_sel.click();" id="upBtn" disabled>Upload Firmware</button></div>
@@ -25,7 +25,6 @@
     </div>
 </div>
 <script>
-var devName = "";
 function upload_file() {
   document.getElementById("status_div").innerHTML = "Upload in progress";
   let data = document.getElementById("file_sel").files[0];
@@ -36,7 +35,7 @@ function upload_file() {
      if (event.lengthComputable) {
         let pc = Math.round((event.loaded / event.total) * 100);
     	  document.getElementById("progress").style.width = pc + "%";
-        document.title = "[" + pc + "%" + "]" + devName + " FW update";
+        document.title = "[" + pc + "%" + "] FW update";
      }
   });
   xhr.onreadystatechange = function () {
@@ -44,14 +43,14 @@ function upload_file() {
       var status = xhr.status;
       if (status >= 200 && status < 400)
       {
-         document.title = "[Done!]" + devName + " FW update";
+         document.title = "[Done!] FW update";
         document.getElementById("status_div").innerHTML = "Upload accepted. Device will reboot.";
         window.setTimeout( function(){
                  window.location = "index.html";
              }, 1000 );
       } else {
         document.getElementById("status_div").innerHTML = "Upload rejected!";
-        document.title = "[ERROR!]" + devName + " FW update";
+        document.title = "[ERROR!] FW update";
       }
     }
   };
@@ -59,20 +58,6 @@ function upload_file() {
   return false;
 }
 
-function fetchInfo(data, status, xhr){
-  const req = new XMLHttpRequest();
-    req.open("GET",'/api/config',true);
-    req.send();
-    req.onload = function(){
-      const json = JSON.parse(req.responseText);
-      devName = json.deviceName;
-      document.getElementById("devName").innerHTML = json.deviceName + " firmware update";
-      document.title = json.deviceName + " FW update";
-      document.getElementById("upBtn").disabled = false;
-    };
-}
-
-fetchInfo();
 
 </script>
 

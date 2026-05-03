@@ -6,7 +6,9 @@
 <body>
 <link rel="stylesheet" href="bootstrap.min.css">
 <div class="container">
-  <div class="row p-3"><h1 class="text-center">IT leds</h1></div>
+  <div class="row pt-3"><h1 class="text-center">IT leds</h1></div>
+
+  <div class="row pt-3"><h1 class="text-center fs-2">FX status</h1></div>
   <div class="row align-items-center">
     <div class="col"><div class="text-end fs-3">Actual FX</div></div>
     <div class="col"><h1><span class="badge text-start text-bg-light" id="currentFX">--</span></h1></div>
@@ -24,11 +26,16 @@
     <button type="button" class="col btn btn-outline-primary" onclick="nextFx();" id="nextFXBtn">Next FX</button>
     <div class="col"></div>
   </div>
+  <div class="row pt-3"><h1 class="text-center fs-2">Audio info</h1></div>
+  <div class="row align-items-center">
+    <div class="col"><div class="text-end fs-3">Audio gain </div></div>
+    <div class="col"><h2><span class="badge text-start text-bg-light" id="audioGain">--</span></h2></div>
+  </div>
 </div>
 <div class="container-fluid fixed-bottom text-center pb-1 bg-light">
     <div class="row">
         <div class="col"><a href="fxconfig.html">FX configuration</a></div>
-        <div class="col"><a href="config.html">Network configuration</a></div>
+        <div class="col"><a href="config.html">System configuration</a></div>
         <div class="col"><a href="ota.html">Update firmware</a></div>
     </div>
 </div>
@@ -94,7 +101,7 @@ function fetchInfo(){
             document.getElementById("nextFXTime").innerHTML = Number.parseFloat((nextTime/1000.0)).toFixed(0) + " s";
         }
         document.getElementById("currFXTime").innerHTML = Number.parseFloat((json["dispTime"]/1000.0)).toFixed(0) + " s";
-
+        document.getElementById("audioGain").innerHTML = json["audioGain"];
     };
     req.onerror = function(e) {
         document.getElementById("currentFX").classList.remove('text-bg-light');

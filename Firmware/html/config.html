@@ -104,7 +104,40 @@
                                 <div class="invalid-feedback">Please provide a valid gateway IP.</div>
                             </div>
                         </div>
-                    </fieldset>                                       
+                    </fieldset>
+                    <fieldset>
+                        <legend class="mt-2">Audio settings</legend>
+                        <div class="row mb-3 align-self-center">
+                            <label for="audioSource" class="col-sm-1 col-form-label">Input selection</label>
+                            <div class="col-sm-3">
+                                <select name="audioSource" id="audioSource">
+                                    <option value="0">Microphone</option>
+                                    <option value="1">Line-in</option>
+                                </select>
+                                <div class="invalid-feedback">
+                                    Please provide a valid value.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3 align-self-center">
+                            <label for="inputAutoGain" class="col-sm-1 col-form-label">Input auto-gain</label>
+                            <div class="col-sm-3">
+                                <input type="checkbox" id="inputAutoGain" onchange="toggleAutoGain();" />
+                                <div class="invalid-feedback">
+                                    Please provide a valid value.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3 align-self-center" id="inputGainDiv">
+                            <label for="inputGain" class="col-sm-1 col-form-label">Input gain (<output id="inputGainVal"></output>)</label>
+                            <div class="col-sm-3">
+                                <input type="range" id="inputGain" min="0.1" max="32" step="0.1" oninput="updateGain();" />
+                                <div class="invalid-feedback">
+                                    Please provide a valid value.
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
                     <button class="btn btn-primary mt-1 ms-1" type="submit" id="subBtn" disabled>Submit</button>
                 </form>
             </div>
@@ -158,9 +191,21 @@
                                 }else{
                                     input.value = cfgValue;
                                 }
+                            }else if(input.type == "range"){
+                                input.value = Number(cfgValue);
+                            }else if(input.type == "checkbox"){
+                                input.checked = cfgValue;
                             }else if(input.type == "password"){
                                 input.value = cfgValue;
                             }
+                        }
+                    });
+                var selects = document.forms["cfgForm"].getElementsByTagName("select");
+                Array.prototype.slice.call(selects)
+                    .forEach(function (select) {
+                        let cfgValue = data[select.id] ?? null;
+                        if(cfgValue !== null) {
+                            select.value = cfgValue;
                         }
                     });
                 document.getElementById("subBtn").disabled = false;
@@ -168,6 +213,8 @@
                     document.getElementById("useDHCP").checked = true;
                 }
                 toggleDHCP();
+                toggleAutoGain();
+                updateGain();
             })
             .catch((error) => {
                 console.error('Fetch error:', error);
@@ -229,16 +276,27 @@
             .forEach(function (input) {
                 if(input.type == "checkbox"){
                     postData[input.id] = input.checked ? true : false;
-                }else if((input.type == "text") /*&& input.value*/){
-                    if(input.inputMode == "numeric"){
-                        postData[input.id] = parseInt(input.value);
-                    }else{
-                        postData[input.id] = input.value;
-                    }
                 }else if(input.type == "password"){
                     if(input.getAttribute("data-changed") == "true"){
                         postData[input.id] = input.value;
                     }
+                }else{
+                    let num = Number(input.value);
+                    if(!Number.isNaN(num)){
+                        postData[input.id] = num;
+                    }else{
+                        postData[input.id] = input.value;
+                    }
+                }
+            });
+        var selects = document.forms["cfgForm"].getElementsByTagName("select");
+        Array.prototype.slice.call(selects)
+            .forEach(function (select) {
+                let num = Number(select.value);
+                if(!Number.isNaN(num)){
+                    postData[select.id] = num;
+                }else{
+                    postData[select.id] = select.value;
                 }
             });
         if(document.getElementById("useDHCP").checked) {
@@ -280,6 +338,15 @@
         document.getElementById("staIPDiv").hidden = en;
         document.getElementById("staSubnetDiv").hidden = en;
         document.getElementById("staGatewayDiv").hidden = en;
+    }
+
+    function toggleAutoGain(){
+        let en = document.getElementById("inputAutoGain").checked;
+        document.getElementById("inputGainDiv").hidden = en;
+    }
+
+    function updateGain(){
+        document.getElementById('inputGainVal').value = document.getElementById("inputGain").value;
     }
 
     loadConfiguration();

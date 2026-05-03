@@ -22,6 +22,7 @@
 #define API_URI "/api/"
 
 extern LedFXManager fxManager;
+extern float getAudioGain();
 
 #define FW_HEADER_LEN 8
 static const char FW_HEADER[FW_HEADER_LEN] = "LED-FW";
@@ -518,6 +519,7 @@ esp_err_t Webserver::status_get_handler(httpd_req_t *req )
             doc["nextTime"] = nextTime;
         }
     }
+    doc["audioGain"] = getAudioGain();
 
     //Serialize to string
     std::string jsonStr;

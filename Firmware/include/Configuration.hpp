@@ -17,6 +17,7 @@ public:
         AP_SSID = 0,   //WiFi AP mode configuration
         STA_SSID,      //WiFi station configuration
         STA_IP,        //WiFi station IP parameters
+        AUDIO,         //Audio configuration
 //TODO: Implement more ?
     };
 
@@ -83,6 +84,25 @@ public:
      */
     void getStationIPConfiguration(IPAddress& ip, IPAddress& subnet, IPAddress& gateway);
 
+
+    /**
+     * Sets the audio configuration
+     * @param source Input source
+     * @param autoGain True to enable auto-gain
+     * @param gain Audio input gain
+     * @param forceNotification True to notifiy new configuration (even if not changed)
+     * @return true if changed
+     */
+    bool setAudioConfiguration(int source, bool autoGain, float gain, bool forceNotification = false);
+
+    /**
+     * Gets audio configuration
+     * @param source Input source
+     * @param autoGain True to enable auto-gain
+     * @param gain Audio input gain
+     */
+    void getAudioConfiguration(int& source, bool& autoGain, float& gain);
+
     /**
      * Create a JSON string of the configuration
      */
@@ -130,6 +150,9 @@ private:
     IPAddress staIP_;                           //!< Station Device IP if static
     IPAddress staSubnet_;                       //!< Device Subnet if static IP
     IPAddress staGateway_;                      //!< Next gateway if static IP
+    bool audioAutoGain_;                        //!< Audio auto-gain enabled
+    float audioGain_;                           //!< Audio manual gain value
+    int audioInput_;                            //!< Audio input
     std::vector<ParameterListener> listeners_;  //!< Configuration listeners
     TaskHandle_t configTask_;                   //!<< Handle to the task
 
