@@ -52,10 +52,12 @@ using namespace fl;
 #define MIC_SAMPLE_RATE 48000
 
 #define EXT_I2S_WS_PIN 4  // Word Select (LRCLK)
-#define EXT_I2S_SD_PIN 5  // Serial Data (DIN)
-#define EXT_I2S_CLK_PIN 6 // Serial Clock (BCLK)
+#define EXT_I2S_SD_PIN 8  // Serial Data (DIN)
+#define EXT_I2S_CLK_PIN 5 // Serial Clock (BCLK)
 #define EXT_I2S_CHANNEL fl::audio::AudioChannel::Both
-#define EXT_SAMPLE_RATE 48000
+#define EXT_SAMPLE_RATE 44100
+
+#define EXT_MCLK 1
 
 
 static const char* TAG = "Main";
@@ -126,13 +128,12 @@ void configureAudioInput(){
         audioSource = fl::audio::IInput::create(config, &errorMsg);
 
         if (!audioSource) {
-            Serial.print("Failed to create audio source: ");
-            Serial.println(errorMsg.c_str());
+            ESP_LOGE(TAG, "Failed to create audio source: %s", errorMsg.c_str());
             return;
         }
 
         // Start audio capture
-        Serial.println("Starting audio capture...");
+        ESP_LOGI(TAG, "Starting audio capture...");
         audioSource->start();
         audioInput = input;
     }
@@ -215,32 +216,35 @@ void fastLedTask(void* param){
             if(sample){
                 //Audio reactive
                 audioReactive.processSample(sample);
+                if(audioReactive.isBassBeat()){
+                    Serial.println("Beat");
+                }
+                // Serial.printf("%f\n", audioReactive.getBassEnergy());
             }
         }
 
-        bool btnState = ::digitalRead(BTN_PIN);
-        if(!btnState && (btnState != lastBtn)){
-            if(!fxManager.isAutoChange()){
-                fxManager.nextFX();
-            }
-            fxManager.setAutoChange(!fxManager.isAutoChange());
-            if(fxManager.isAutoChange()){
-                ESP_LOGI(TAG, "Automatic FX switch");
-            }else{
-                ESP_LOGI(TAG, "No-automatic FX switch");
-            }
-        }
-        lastBtn = btnState;
-        fxManager.draw(leds, (sample.isValid() ? &audioReactive : nullptr));
+        // bool btnState = ::digitalRead(BTN_PIN);
+        // if(!btnState && (btnState != lastBtn)){
+        //     if(!fxManager.isAutoChange()){
+        //         fxManager.nextFX();
+        //     }
+        //     fxManager.setAutoChange(!fxManager.isAutoChange());
+        //     if(fxManager.isAutoChange()){
+        //         ESP_LOGI(TAG, "Automatic FX switch");
+        //     }else{
+        //         ESP_LOGI(TAG, "No-automatic FX switch");
+        //     }
+        // }
+        // lastBtn = btnState;
+        // fxManager.draw(leds, (sample.isValid() ? &audioReactive : nullptr));
 
-        if(audioReactive.isBeat()){
-            onBoardLed = CRGB::White;
-        }else{
-            onBoardLed.fadeToBlackBy(50);
-        }
+        // if(audioReactive.isBeat()){
+        //     onBoardLed = CRGB::White;
+        // }else{
+        //     onBoardLed.fadeToBlackBy(50);
+        // }
 
-        FastLED.show();
-        yield();
+        // FastLED.show();
         delay(1);
     }
 }
