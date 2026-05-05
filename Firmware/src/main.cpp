@@ -55,7 +55,7 @@ using namespace fl;
 #define EXT_I2S_SD_PIN 8  // Serial Data (DIN)
 #define EXT_I2S_CLK_PIN 5 // Serial Clock (BCLK)
 #define EXT_I2S_CHANNEL fl::audio::AudioChannel::Both
-#define EXT_SAMPLE_RATE 44100
+#define EXT_SAMPLE_RATE 22050
 
 #define EXT_MCLK 1
 
@@ -192,6 +192,7 @@ void fastLedTask(void* param){
 
     unsigned long lastSample = ::micros();
 
+    ::pinMode(17, OUTPUT);
     while(true){
         //Reconfigure audio if needed
         if(audioConfigChanged){
@@ -217,7 +218,10 @@ void fastLedTask(void* param){
                 //Audio reactive
                 audioReactive.processSample(sample);
                 if(audioReactive.isBassBeat()){
-                    Serial.println("Beat");
+                    // Serial.println("Beat");
+                    ::digitalWrite(17, 1);
+                }else{
+                    ::digitalWrite(17, 0);
                 }
                 // Serial.printf("%f\n", audioReactive.getBassEnergy());
             }
