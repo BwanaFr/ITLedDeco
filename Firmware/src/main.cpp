@@ -35,6 +35,7 @@
 
 #include "NetworkConfigurator.hpp"
 #include "Configuration.hpp"
+#include "PCM1808.hpp"
 
 using namespace fl;
 
@@ -55,7 +56,7 @@ using namespace fl;
 #define EXT_I2S_SD_PIN 8  // Serial Data (DIN)
 #define EXT_I2S_CLK_PIN 5 // Serial Clock (BCLK)
 #define EXT_I2S_CHANNEL fl::audio::AudioChannel::Both
-#define EXT_SAMPLE_RATE 22050
+#define EXT_SAMPLE_RATE 44100
 
 #define EXT_MCLK 1
 
@@ -91,20 +92,12 @@ ITParticles itParticles(NB_STRIP_LEDS + 1, 5);
 LedFXManager fxManager{SCREEN_WIDTH * SCREEN_HEIGHT};
 // fl::FxEngine fxEngine(SCREEN_WIDTH * SCREEN_HEIGHT, false); //08/04/28 : Activating interpolation results in heap crashes
 
-
-fl::audio::Config createADCAudioConfig(){
-    fl::audio::ConfigI2S config(EXT_I2S_WS_PIN, EXT_I2S_SD_PIN, EXT_I2S_CLK_PIN, 0, EXT_I2S_CHANNEL, EXT_SAMPLE_RATE,
-                         16, fl::audio::I2SCommFormat::Philips);
-    fl::audio::Config out(config);
-    out.setMicProfile(fl::audio::MicProfile::None);
-    return out;
-}
-
 fl::audio::Config createMicAudioConfig(){
     fl::audio::ConfigI2S config(MIC_I2S_WS_PIN, MIC_I2S_SD_PIN, MIC_I2S_CLK_PIN, 0, MIC_I2S_CHANNEL, MIC_SAMPLE_RATE,
                          16, fl::audio::I2SCommFormat::Philips);
     fl::audio::Config out(config);
     out.setMicProfile(fl::audio::MicProfile::GenericMEMS);
+    FastLED.add(out);
     return out;
 }
 
@@ -116,8 +109,7 @@ void configureAudioInput(){
     ESP_LOGI(TAG, "Configuring audio -> Gain : %f, Auto-gain : %u, Input : %s", audioGain, autoGainEnabled, (micInput ? "Mic" : "Line"));
 
     if(input != audioInput){
-        // Create platform-specific audio configuration
-        fl::audio::Config config =  micInput ?  createMicAudioConfig() :  createADCAudioConfig();
+
 
         //Destroy previously used audio objects
         audioSource.reset();
@@ -125,7 +117,13 @@ void configureAudioInput(){
         // Initialize I2S Audio
         Serial.println("Initializing audio input...");
         fl::string errorMsg;
-        audioSource = fl::audio::IInput::create(config, &errorMsg);
+        if(micInput){
+            // Create platform-specific audio configuration
+            fl::audio::Config config =  createMicAudioConfig();
+            audioSource = fl::audio::IInput::create(config, &errorMsg);
+        }else{
+            audioSource = fl::PCM1808::createPCM1808(EXT_SAMPLE_RATE);
+        }
 
         if (!audioSource) {
             ESP_LOGE(TAG, "Failed to create audio source: %s", errorMsg.c_str());
@@ -136,6 +134,8 @@ void configureAudioInput(){
         ESP_LOGI(TAG, "Starting audio capture...");
         audioSource->start();
         audioInput = input;
+
+        //fl::audio::AudioManager::instance().add(fl::move(input));
     }
 
     //Configure signal conditionner
@@ -148,7 +148,7 @@ void configureAudioInput(){
 
     //Configure AutoGain
     fl::audio::AutoGainConfig agcConfig;
-    agcConfig.preset = fl::audio::AGCPreset::AGCPreset_Lazy;
+    // agcConfig.preset = fl::audio::AGCPreset::AGCPreset_Lazy;
     autoGain.configure(agcConfig);
     autoGain.reset();
 
@@ -213,17 +213,14 @@ void fastLedTask(void* param){
                 }else{
                     sample.applyGain(audioGain);
                 }
-            }
-            if(sample){
                 //Audio reactive
                 audioReactive.processSample(sample);
-                if(audioReactive.isBassBeat()){
+                if(audioReactive.getSpectralFlux() > 1000.0f){ //audioReactive.isBeat()){
                     // Serial.println("Beat");
                     ::digitalWrite(17, 1);
                 }else{
                     ::digitalWrite(17, 0);
                 }
-                // Serial.printf("%f\n", audioReactive.getBassEnergy());
             }
         }
 

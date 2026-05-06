@@ -10,12 +10,13 @@ namespace fl {
 
 class PCM1808 : public audio::IInput {
 public:
-    PCM1808();
+    PCM1808(uint32_t sample_rate);
     ~PCM1808();
     void start() FL_NOEXCEPT override;
     void stop() FL_NOEXCEPT override;
     bool error(fl::string *msg = nullptr) FL_NOEXCEPT override;
     audio::Sample read() FL_NOEXCEPT override;
+    static fl::shared_ptr<fl::audio::IInput> createPCM1808(uint32_t sample_rate);
 private:
     void initI2S();
     void destroyI2S();

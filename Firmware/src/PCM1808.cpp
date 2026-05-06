@@ -1,11 +1,11 @@
 #include "PCM1808.hpp"
 #include "fl/stl/assert.h"
 
-#define AUDIO_BUFFER_SIZE 240
+#define AUDIO_BUFFER_SIZE 128
 
 namespace fl{
 
-PCM1808::PCM1808() : rx_handle_{nullptr}, hasError_{false}, totalSampleRead_{0}, sample_rate_{44100}
+PCM1808::PCM1808(uint32_t sample_rate) : rx_handle_{nullptr}, hasError_{false}, totalSampleRead_{0}, sample_rate_{sample_rate}
 {
 }
 
@@ -42,11 +42,12 @@ audio::Sample PCM1808::read() FL_NOEXCEPT
         FL_WARN("I2S channel is not initialized");
         return audio::Sample();  // Invalid sample
     }
-    aud_sample_t buf[AUDIO_BUFFER_SIZE];
+    size_t buf_size = 2 * AUDIO_BUFFER_SIZE * (16 / 8);
+    aud_sample_t buf[buf_size];
     size_t bytes_read = 0;
     size_t count = 0;
     esp_err_t result =
-        i2s_channel_read(rx_handle_, buf, sizeof(buf), &bytes_read, 0);
+        i2s_channel_read(rx_handle_, buf, buf_size * sizeof(aud_sample_t), &bytes_read, 10);
     if (result == ESP_OK) {
         if (bytes_read > 0) {
             // cout << "Bytes read: " << bytes_read << endl;
@@ -58,10 +59,19 @@ audio::Sample PCM1808::read() FL_NOEXCEPT
         return audio::Sample();  // Invalid sample
     }
     u32 timestamp_ms = static_cast<u32>((totalSampleRead_ * 1000ULL) / sample_rate_);
-    // Update total samples counter
-    totalSampleRead_ += count;
 
-    fl::span<const i16> data(buf, count);
+    size_t monoCount = count / 2;
+    //Convert to mono
+    int index = 0;
+    for(size_t i=0;i<count;i+=2){
+        int64_t s = (buf[i] + buf[i+1])/2;
+        buf[index++] = static_cast<aud_sample_t>(s);
+    }
+
+    // Update total samples counter
+    totalSampleRead_ += monoCount;
+
+    fl::span<const i16> data(buf, monoCount);
 
     // Create audio::Sample with pooled audio::SampleImpl (pooling handled internally)
     return audio::Sample(data, timestamp_ms);
@@ -82,18 +92,18 @@ void PCM1808::initI2S()
             .mclk_multiple = I2S_MCLK_MULTIPLE_384,
             .bclk_div = 8,  //Not used in slave mode
         },
-        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(bit_width, I2S_SLOT_MODE_STEREO)/*{
+        .slot_cfg = {
             .data_bit_width = bit_width,
-            .slot_bit_width = I2S_SLOT_BIT_WIDTH_AUTO,
+            .slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT,
             .slot_mode = slot_mode,
             .slot_mask = slot_mask,
-            .ws_width = 24,
+            .ws_width = 32,
             .ws_pol = false,
             .bit_shift = true,
             .left_align = true,
             .big_endian = false,
             .bit_order_lsb = false,
-        }*/,
+        },
         .gpio_cfg = {
             .mclk = GPIO_NUM_1,
             .bclk = GPIO_NUM_5,
@@ -109,8 +119,7 @@ void PCM1808::initI2S()
     // Create I2S channel configuration with DMA buffer settings
     i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(
         i2s_port, I2S_ROLE_MASTER);
-    chan_cfg.dma_frame_num = AUDIO_BUFFER_SIZE;
-
+    chan_cfg.dma_frame_num = AUDIO_BUFFER_SIZE; //dma_frame_num * slot_num * data_bit_width / 8 = dma_buffer_size <= 4092
     // Create RX channel
     esp_err_t ret = i2s_new_channel(&chan_cfg, nullptr, &rx_handle_);
     FL_ASSERT(ret == ESP_OK, "Failed to create I2S channel");
@@ -134,6 +143,11 @@ void PCM1808::destroyI2S()
         i2s_del_channel(rx_handle_);
         rx_handle_ = nullptr;
     }
+}
+
+fl::shared_ptr<fl::audio::IInput> PCM1808::createPCM1808(uint32_t sample_rate)
+{
+    return fl::make_shared<fl::PCM1808>(sample_rate);
 }
 
 }//namespace fl
