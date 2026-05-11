@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+</head>
+<body>
+<link rel="stylesheet" href="bootstrap.min.css">
+<div class="container">
+  <div class="row pt-3"><h1 class="text-center">IT leds</h1></div>
+
+  <div class="row pt-3"><h1 class="text-center fs-2">FX status</h1></div>
+  <div class="row align-items-center">
+    <div class="col"><div class="text-end fs-3">Actual FX</div></div>
+    <div class="col"><h1><span class="badge text-start text-bg-light" id="currentFX">--</span></h1></div>
+  </div>
+  <div class="row align-items-center">
+    <div class="col"><div class="text-end fs-3">Next FX in </div></div>
+    <div class="col"><h2><span class="badge text-start text-bg-light" id="nextFXTime">--</span></h2></div>
+  </div>
+  <div class="row align-items-center">
+    <div class="col"><div class="text-end fs-3">FX displayed since </div></div>
+    <div class="col"><h2><span class="badge text-start text-bg-light" id="currFXTime">--</span></h2></div>
+  </div>
+  <div class="row align-items-center">
+    <div class="col"></div>
+    <button type="button" class="col btn btn-outline-primary" onclick="nextFx();" id="nextFXBtn">Next FX</button>
+    <div class="col"></div>
+  </div>
+  <div class="row pt-3"><h1 class="text-center fs-2">Audio info</h1></div>
+  <div class="row align-items-center">
+    <div class="col"><div class="text-end fs-3">Audio gain </div></div>
+    <div class="col"><h2><span class="badge text-start text-bg-light" id="audioGain">--</span></h2></div>
+  </div>
+</div>
+<div class="container-fluid fixed-bottom text-center pb-1 bg-light">
+    <div class="row">
+        <div class="col"><a href="fxconfig.html">FX configuration</a></div>
+        <div class="col"><a href="config.html">System configuration</a></div>
+        <div class="col"><a href="ota.html">Update firmware</a></div>
+    </div>
+</div>
+<script>
+
+function setValue(data, key, el, unit=""){
+    if((key in data)){
+        setVisible(el.closest('[class*="row"]'), true);
+        if(unit){
+            el.innerHTML = data[key] + " " + unit;
+        }else{
+            el.innerHTML = data[key];
+        }
+    }else{
+        setVisible(el.closest('[class*="row"]'), false);
+    }
+}
+
+function setBiColorValue(data, key, el, fn, hide){
+    let autoHide = true;
+    if(typeof hide === 'boolean'){
+        autoHide = hide;
+    }
+    if((key in data)){
+        setVisible(el.closest('[class*="row"]'), true);
+        el.innerHTML = data[key];
+        if(typeof fn === "function"){
+            el.classList.remove('text-bg-success', 'text-bg-danger', 'text-bg-light');
+            let val = fn(data[key]);
+            if(val){
+                el.classList.add('text-bg-success');
+            }else{
+                el.classList.add('text-bg-danger');
+            }
+        }
+    }else{
+        if(autoHide){
+            setVisible(el.closest('[class*="row"]'), false);
+        }
+    }
+}
+
+function nextFx(){
+    const req = new XMLHttpRequest();
+    req.open("GET",'/api/nextFX', true);
+    req.onload = function(){
+        document.getElementById("nextFXBtn").disabled = false;
+    };
+    document.getElementById("nextFXBtn").disabled = true;
+    req.send();
+}
+
+function fetchInfo(){
+    const req = new XMLHttpRequest();
+    req.open("GET",'/api/status',true);
+    req.onload = function(){
+        const json = JSON.parse(req.responseText);
+        document.getElementById("currentFX").classList.remove('text-bg-danger');
+        document.getElementById("currentFX").classList.add('text-bg-light');
+        document.getElementById("currentFX").innerHTML = json["FXName"];
+        let nextTime = json["nextTime"]
+        if(nextTime){
+            document.getElementById("nextFXTime").innerHTML = Number.parseFloat((nextTime/1000.0)).toFixed(0) + " s";
+        }
+        document.getElementById("currFXTime").innerHTML = Number.parseFloat((json["dispTime"]/1000.0)).toFixed(0) + " s";
+        document.getElementById("audioGain").innerHTML = json["audioGain"];
+    };
+    req.onerror = function(e) {
+        document.getElementById("currentFX").classList.remove('text-bg-light');
+        document.getElementById("currentFX").classList.add('text-bg-danger');
+        document.getElementById("currentFX").innerHTML = "Offline (network error)";
+    };
+    req.send();
+    setTimeout(fetchInfo, 1000);
+};
+fetchInfo();
+
+</script>
+
+</body>
+</html>

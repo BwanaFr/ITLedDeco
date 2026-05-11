@@ -1,7 +1,7 @@
 #include "PCM1808.hpp"
 #include "fl/stl/assert.h"
 
-#define AUDIO_BUFFER_SIZE 128
+#define AUDIO_BUFFER_SIZE 1024
 
 namespace fl{
 
@@ -42,7 +42,7 @@ audio::Sample PCM1808::read() FL_NOEXCEPT
         FL_WARN("I2S channel is not initialized");
         return audio::Sample();  // Invalid sample
     }
-    size_t buf_size = 2 * AUDIO_BUFFER_SIZE * (16 / 8);
+    size_t buf_size = AUDIO_BUFFER_SIZE;
     aud_sample_t buf[buf_size];
     size_t bytes_read = 0;
     size_t count = 0;

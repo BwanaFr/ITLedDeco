@@ -34,7 +34,7 @@ bool NetworkConfigurator::startNetwork()
     ESP_LOGI(TAG, "Starting network");
     WiFi.disconnect();
     WiFi.onEvent(networkEvent);
-
+    WiFi.setTxPower(WIFI_POWER_8_5dBm);
     WiFi.mode(WIFI_AP_STA); //Switch to AP_STA to be able to connect to a network + serving pages
 
     bool res = configureSoftAP();

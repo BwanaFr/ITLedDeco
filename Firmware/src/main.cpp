@@ -190,7 +190,7 @@ void fastLedTask(void* param){
     bool lastBtn = true;
     bool btnUsed = false;
 
-    unsigned long lastSample = ::micros();
+    unsigned long lastBeat = 0;
 
     ::pinMode(17, OUTPUT);
     while(true){
@@ -215,12 +215,16 @@ void fastLedTask(void* param){
                 }
                 //Audio reactive
                 audioReactive.processSample(sample);
-                if(audioReactive.getSpectralFlux() > 1000.0f){ //audioReactive.isBeat()){
+                // Serial.printf("%f\n", audioReactive.getBassEnergy());
+                //if(audioReactive.isBassBeat()){// && ((::millis() - lastBeat) >= 200)){
+                if((audioReactive.getBassEnergy() > 500.0f) && (audioReactive.getBassEnergy() > (bassEnergy*2.0f))){
                     // Serial.println("Beat");
+                    lastBeat = ::millis();
                     ::digitalWrite(17, 1);
                 }else{
                     ::digitalWrite(17, 0);
                 }
+                bassEnergy = audioReactive.getBassEnergy();
             }
         }
 
