@@ -15,7 +15,8 @@ public:
     void start();
     void stop();
     bool read();
-    const float* getBuffer(size_t& size);
+    const float* getConstBuffer(size_t& size);
+    float* getBuffer(size_t& size);
     void reset();
 private:
     void initI2S();

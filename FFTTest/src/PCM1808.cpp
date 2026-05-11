@@ -86,9 +86,9 @@ bool PCM1808::read()
     return ret;
 }
 
-const float* PCM1808::getBuffer(size_t& size)
+float* PCM1808::getBuffer(size_t& size)
 {
-    const float * ret = buffer;
+    float * ret = buffer;
     if(!ret){
         ESP_LOGE(TAG, "Unable to allocate buffer!");
         size = 0;
