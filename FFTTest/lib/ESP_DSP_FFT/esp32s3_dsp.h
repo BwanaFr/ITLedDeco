@@ -50,7 +50,7 @@ class ESP32S3_FFT {
       void end(void);
       void compute(const float *source_data, float *output_data, bool use_hann_window=true);  // call to perform FFT
       float calcFreqBin(float sample_rate_hz, float fft_size);  // return freq / output data point
-
+      inline const float* getFFTBuffer() { return fft_buffer; }
    private:
       uint16_t _fft_size;                 // fft block size - in powers of 2 (256, 512, 1024, etc.)
       uint32_t _original_samples;         // caller float data points.

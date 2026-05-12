@@ -26,7 +26,7 @@ float rms(const float* buffer, size_t bufSize)
     for(size_t i=0;i<bufSize;++i){
         ret += buffer[i] * buffer[i];
     }
-    return sqrt((1.0f/bufSize)*ret);
+    return sqrt(ret/static_cast<float>(bufSize));
 }
 
 float energy(float rms, size_t bufSize)
@@ -73,6 +73,13 @@ void removeDc(float* buffer, size_t count){
     }
 }
 
+void computePower(float* buffer, size_t count)
+{
+    for(size_t i=0;i<count;++i){
+        buffer[i] = std::pow(buffer[i], 2)/(2.0*(SAMPLE_RATE/FFT_SIZE));
+    }
+}
+
 void setup()
 {
     //Starts serial
@@ -90,10 +97,10 @@ unsigned long bCount = 0;
 bool wasBeat = false;
 
 #define RMS_HISTORY 10
-float prevRMS[RMS_HISTORY] = {0.0f};
+float prevRMS[RMS_HISTORY] = {1.0f};
 
-#define DIFF_HISTORY 10
-float prevDiff[DIFF_HISTORY] = {0.0f};
+#define DIFF_HISTORY 1
+float prevDiff[DIFF_HISTORY] = {1.0f};
 unsigned long lastBeat = 0;
 
 void loop()
@@ -107,23 +114,31 @@ void loop()
         unsigned long start = millis();
 
         fft.compute(buffer, output_bufr);
+        //Transform to spectrum power
 
-        float freqPerBin = SAMPLE_RATE/FFT_SAMPLES;
+        float freqPerBin = SAMPLE_RATE/FFT_SIZE;
         int startFreqBin = 50/freqPerBin;
-        int endFreqBin = 500/freqPerBin;
+        int endFreqBin = 600/freqPerBin;
         size_t count = (endFreqBin-startFreqBin)+1;
+        computePower(&output_bufr[startFreqBin], count);
         float rmsVal = getMean(&output_bufr[startFreqBin], count);
+        float sigRMS = rms(buffer, size);
         // float rmsVal = energy(rms(buffer, size), size);
         float prevRMSMean = getMean(prevRMS, RMS_HISTORY);
         float diff = (rmsVal/prevRMSMean);
+        if(std::isnan(diff) || (diff == 0.0f)){
+            diff = 1.0f;
+        }
         float prevDiffMean = getMean(prevDiff, DIFF_HISTORY);
+        if(std::isnan(prevDiffMean) || (prevDiffMean == 0.0f)){
+            prevDiffMean = 1.0f;
+        }
         char beat = '-';
 
-        if(diff > 1.3f && (rmsVal > 5000.0f)){
+        if(diff > 2.0f && (sigRMS > 3000.0f)){
             unsigned long now = millis();
             // if(wasBeat){
                 if((now - lastBeat)>150){
-                    // Serial.print(" BEAT!");
                     digitalWrite(LED_BUILTIN, 1);
                     lastBeat = now;
                     beat = '+';
@@ -133,7 +148,7 @@ void loop()
         }else{
             digitalWrite(LED_BUILTIN, 0);
         }
-        Serial.printf("Ampl[%c] : %f / %f \t\t(%f / %f) from %d to %d\n", beat, rmsVal, prevRMSMean, diff, prevDiffMean,startFreqBin,endFreqBin);
+        Serial.printf("Ampl[%c] : %f \t\t(%f / %f) from %d to %d\n", beat, sigRMS, diff, prevDiffMean,startFreqBin,endFreqBin);
 
 
         for(int i=1;i<RMS_HISTORY;++i){
