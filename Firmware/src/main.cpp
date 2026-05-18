@@ -23,7 +23,6 @@
 #include "ITLedMap.hpp"
 #include <LedFXManager.hpp>
 
-#include "fl/audio/auto_gain.h"
 #include "fl/audio/audio_reactive.h"
 
 #include "FLNoisePalette.hpp"
@@ -36,43 +35,58 @@
 #include "NetworkConfigurator.hpp"
 #include "Configuration.hpp"
 
+#include "AudioInput.hpp"
+#include "I2SAudioInput.hpp"
+#include "AudioReactive.hpp"
+
 using namespace fl;
 
-#define DATA_PIN_I 45
-#define DATA_PIN_T 46
-#define DATA_PIN_ONBOARD 33
 
-#define BTN_PIN 38
+#ifdef S3_CAM                   // Build for Aliexpress S3 CAM board
+#define DATA_PIN_I 45           // I Led data pin
+#define DATA_PIN_T 46           // T Led data pin
+#define DATA_PIN_ONBOARD 33     // Onboard LED
+
+#define BTN_PIN 38              // Onboard button
+#define LED_PIN 34              // Onboard led
 
 // I2S pins for INMP441 microphone (adjust for your board)
-#define MIC_I2S_WS_PIN 37  // Word Select (LRCLK)
-#define MIC_I2S_SD_PIN 35  // Serial Data (DIN)
-#define MIC_I2S_CLK_PIN 36 // Serial Clock (BCLK)
-#define MIC_I2S_CHANNEL fl::audio::AudioChannel::Left
-#define MIC_SAMPLE_RATE 48000
+#define MIC_I2S_WS_PIN GPIO_NUM_37          // Word Select (LRCLK)
+#define MIC_I2S_SD_PIN GPIO_NUM_35          // Serial Data (DIN)
+#define MIC_I2S_CLK_PIN GPIO_NUM_36         // Serial Clock (BCLK)
 
-#define EXT_I2S_WS_PIN 4  // Word Select (LRCLK)
-#define EXT_I2S_SD_PIN 5  // Serial Data (DIN)
-#define EXT_I2S_CLK_PIN 6 // Serial Clock (BCLK)
-#define EXT_I2S_CHANNEL fl::audio::AudioChannel::Both
-#define EXT_SAMPLE_RATE 48000
+//External ADC
+#define EXT_I2S_BCLK_PIN GPIO_NUM_6         // Serial Clock (BCLK)
+#define EXT_I2S_WS_PIN GPIO_NUM_4           // Word Select (LRCLK)
+#define EXT_I2S_SD_PIN GPIO_NUM_5           // Serial Data (DIN)
+#define EXT_I2S_MCLK_PIN GPIO_NUM_NC        // Masterc lock (MCLK)
 
+#elif defined(T7_S3)
+#define DATA_PIN_I 10           // I Led data pin
+#define DATA_PIN_T 11           // T Led data pin
+
+#define BTN_PIN 0               // Onboard button
+#define LED_PIN 17              // Onboard led
+
+// I2S pins for INMP441 microphone (adjust for your board)
+#define MIC_I2S_WS_PIN GPIO_NUM_37  // Word Select (LRCLK)
+#define MIC_I2S_SD_PIN GPIO_NUM_35  // Serial Data (DIN)
+#define MIC_I2S_CLK_PIN GPIO_NUM_36 // Serial Clock (BCLK)
+
+//External ADC
+#define EXT_I2S_BCLK_PIN GPIO_NUM_5     // Serial Clock (BCLK)
+#define EXT_I2S_WS_PIN GPIO_NUM_4       // Word Select (LRCLK)
+#define EXT_I2S_SD_PIN GPIO_NUM_8       // Serial Data (DIN)
+#define EXT_I2S_MCLK_PIN GPIO_NUM_1     // Masterc lock (MCLK)
+#endif
 
 static const char* TAG = "Main";
 
-//Audio objects
-// Global audio source (initialized in setup)
-fl::shared_ptr<fl::audio::IInput> audioSource;
-//Signal conditionner
-fl::audio::SignalConditioner sConditioner;
-//AutoGain
-fl::audio::AutoGain autoGain;
-//Audio reactive
-fl::audio::Reactive audioReactive;
-bool autoGainEnabled = false;
-float audioGain = 1.0f;
+//Audio objects for sound-reactive tentative
+AudioReactive audioReactive;
+AudioInput* audioInput = nullptr;
+int currentAudioInput = -1;
 bool audioConfigChanged = false;
-int audioInput = -1;
 
 CRGB onBoardLed;
 
@@ -87,88 +101,35 @@ ITVuMeter itVuMeter(xymap);
 ITParticles itParticles(NB_STRIP_LEDS + 1, 5);
 
 LedFXManager fxManager{SCREEN_WIDTH * SCREEN_HEIGHT};
-// fl::FxEngine fxEngine(SCREEN_WIDTH * SCREEN_HEIGHT, false); //08/04/28 : Activating interpolation results in heap crashes
-
-
-fl::audio::Config createADCAudioConfig(){
-    fl::audio::ConfigI2S config(EXT_I2S_WS_PIN, EXT_I2S_SD_PIN, EXT_I2S_CLK_PIN, 0, EXT_I2S_CHANNEL, EXT_SAMPLE_RATE,
-                         16, fl::audio::I2SCommFormat::Philips);
-    fl::audio::Config out(config);
-    out.setMicProfile(fl::audio::MicProfile::None);
-    return out;
-}
-
-fl::audio::Config createMicAudioConfig(){
-    fl::audio::ConfigI2S config(MIC_I2S_WS_PIN, MIC_I2S_SD_PIN, MIC_I2S_CLK_PIN, 0, MIC_I2S_CHANNEL, MIC_SAMPLE_RATE,
-                         16, fl::audio::I2SCommFormat::Philips);
-    fl::audio::Config out(config);
-    out.setMicProfile(fl::audio::MicProfile::GenericMEMS);
-    return out;
-}
 
 void configureAudioInput(){
     int input;
+    bool autoGainEnabled;
+    float audioGain;
     configuration.getAudioConfiguration(input, autoGainEnabled, audioGain);
 
     bool micInput = (input == 0);
     ESP_LOGI(TAG, "Configuring audio -> Gain : %f, Auto-gain : %u, Input : %s", audioGain, autoGainEnabled, (micInput ? "Mic" : "Line"));
 
-    if(input != audioInput){
-        // Create platform-specific audio configuration
-        fl::audio::Config config =  micInput ?  createMicAudioConfig() :  createADCAudioConfig();
-
+    if(input != currentAudioInput){
         //Destroy previously used audio objects
-        audioSource.reset();
+        if(audioInput){
+            delete audioInput;
+            audioInput = nullptr;
+        }
 
         // Initialize I2S Audio
-        Serial.println("Initializing audio input...");
-        fl::string errorMsg;
-        audioSource = fl::audio::IInput::create(config, &errorMsg);
-
-        if (!audioSource) {
-            Serial.print("Failed to create audio source: ");
-            Serial.println(errorMsg.c_str());
-            return;
+        if(input == 1){
+            //PCM1808 input
+            audioInput = new I2SAudioInput(22050, 512, EXT_I2S_BCLK_PIN, EXT_I2S_WS_PIN, EXT_I2S_SD_PIN, EXT_I2S_MCLK_PIN);
         }
 
         // Start audio capture
-        Serial.println("Starting audio capture...");
-        audioSource->start();
-        audioInput = input;
+        if(audioInput){
+            audioInput->start();
+        }
+        currentAudioInput = input;
     }
-
-    //Configure signal conditionner
-    fl::audio::SignalConditionerConfig scConfig;
-    // scConfig.enableDCRemoval = config.enableSignalConditioning;
-    // scConfig.enableSpikeFilter = config.enableSignalConditioning;
-    // scConfig.enableNoiseGate = config.noiseGate && config.enableSignalConditioning;
-    sConditioner.configure(scConfig);
-    sConditioner.reset();
-
-    //Configure AutoGain
-    fl::audio::AutoGainConfig agcConfig;
-    agcConfig.preset = fl::audio::AGCPreset::AGCPreset_Lazy;
-    autoGain.configure(agcConfig);
-    autoGain.reset();
-
-    //Configure audio reactive
-    fl::audio::ReactiveConfig reactConfig;
-    if(audioInput == 0){
-        reactConfig.sampleRate = MIC_SAMPLE_RATE;
-    }else{
-        reactConfig.sampleRate = EXT_SAMPLE_RATE;
-    }
-    // Enable signal conditioning (DC removal, spike filter, noise gate)
-    reactConfig.enableSignalConditioning = true;
-    // Enable advanced beat tracking with BPM
-    reactConfig.enableMusicalBeatDetection = false;
-    // Enable noise floor tracking
-    reactConfig.enableNoiseFloorTracking = true;
-    //Enable per-band beat detection
-    reactConfig.enableMultiBandBeats = true;
-    reactConfig.enableMultiBand = true;
-
-    audioReactive.begin(reactConfig);
 }
 
 void configurationChanged(DeviceConfiguration::Parameter param)
@@ -178,6 +139,31 @@ void configurationChanged(DeviceConfiguration::Parameter param)
     }
 }
 
+/**
+ * Audio reactive task
+ */
+void audioReactiveTask(void* param){
+    delay(5000);
+    //Enable audio
+    configureAudioInput();
+    while(true){
+        //Reconfigure audio if needed
+        if(audioConfigChanged){
+            configureAudioInput();
+            audioConfigChanged = false;
+        }
+        if(audioInput){
+            const AudioReactiveData* data = audioReactive.process(audioInput);
+            if(data){
+                // ESP_LOGI("Audio", "RMS: %f", data->signalRMS);
+#ifdef LED_PIN
+                ::digitalWrite(LED_PIN, data->beatDetected);
+#endif
+            }
+        }
+        yield();
+    }
+}
 
 /**
  * Runs in a FreeRTOS task to avoid stack overflow
@@ -192,32 +178,6 @@ void fastLedTask(void* param){
     unsigned long lastSample = ::micros();
 
     while(true){
-        //Reconfigure audio if needed
-        if(audioConfigChanged){
-            configureAudioInput();
-            audioConfigChanged = false;
-        }
-
-        fl::audio::Sample sample;
-        //Get audio samples
-        if(audioSource){
-            sample = audioSource->read();
-            if(sample){
-                //Conditionner
-                sample = sConditioner.processSample(sample);
-                //Autogain
-                if(autoGainEnabled){
-                    sample = autoGain.process(sample);
-                }else{
-                    sample.applyGain(audioGain);
-                }
-            }
-            if(sample){
-                //Audio reactive
-                audioReactive.processSample(sample);
-            }
-        }
-
         bool btnState = ::digitalRead(BTN_PIN);
         if(!btnState && (btnState != lastBtn)){
             if(!fxManager.isAutoChange()){
@@ -231,17 +191,10 @@ void fastLedTask(void* param){
             }
         }
         lastBtn = btnState;
-        fxManager.draw(leds, (sample.isValid() ? &audioReactive : nullptr));
-
-        if(audioReactive.isBeat()){
-            onBoardLed = CRGB::White;
-        }else{
-            onBoardLed.fadeToBlackBy(50);
-        }
+        fxManager.draw(leds, nullptr);  //TODO: Change the audioreactive part
 
         FastLED.show();
-        yield();
-        delay(1);
+        delay(10);
     }
 }
 
@@ -252,6 +205,11 @@ void setup()
 
     //Button pin
     ::pinMode(BTN_PIN, INPUT_PULLUP);
+
+    //LED
+#ifdef LED_PIN
+    ::pinMode(LED_PIN, OUTPUT);
+#endif
 
     //Loads configuration
     configuration.begin();
@@ -267,9 +225,10 @@ void setup()
         .setCorrection(LEDColorCorrection::TypicalLEDStrip);
     FastLED.addLeds<WS2812B, DATA_PIN_T, GRB>(leds, iCount, (LETTER_HEIGHT + LETTER_WIDTH))
         .setCorrection(LEDColorCorrection::TypicalLEDStrip);
+#ifdef DATA_PIN_ONBOARD
     //Internal led to show beat detection
     FastLED.addLeds<SK6812, DATA_PIN_ONBOARD, GRB>(&onBoardLed, 1);
-
+#endif
     FastLED.setBrightness(64);
 
     fxManager.registerFx(&noisePalette);
@@ -278,19 +237,20 @@ void setup()
     fxManager.registerFx(&itParticles);
     fxManager.registerFx(&itVuMeter);
 
-    //Enable audio
-    configureAudioInput();
-
     //Loads FX configuration
     JsonDocument doc;
     configuration.loadFXConfiguration(doc);
     fxManager.setFXConfigurations(doc, false);
 
+    //Removes logs from FXManager
+    esp_log_level_set("LedFXManager", ESP_LOG_WARN);
+
     //Create the FreeRTOS OS with a stack of 16KB
     xTaskCreateUniversal(fastLedTask, "FastLed", 16*1024, nullptr, 1, NULL, 1);
-    // xTaskCreate(fastLedTask, "FastLed", 16*1024, nullptr, 1, NULL);
-}
 
+    //Create a task for processing audio input
+    xTaskCreate(audioReactiveTask, "Audio", 4096, nullptr, 1, NULL);
+}
 
 void loop()
 {
@@ -298,9 +258,10 @@ void loop()
 }
 
 float getAudioGain(){
-    if(autoGainEnabled){
-        return autoGain.getGain();
-    }else{
-        return audioGain;
-    }
+    // if(autoGainEnabled){
+    //     return autoGain.getGain();
+    // }else{
+    //     return audioGain;
+    // }
+    return 0.0f;
 }
