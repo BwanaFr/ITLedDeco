@@ -3,7 +3,7 @@
 #include <FastLED.h>
 #include <fl/fx/fx.h>
 #include <ArduinoJson.h>
-#include <fl/audio/audio_reactive.h>
+#include <AudioReactive.hpp>
 
 class LedFX {
 public:
@@ -71,7 +71,7 @@ public:
     /**
      * Called when a new audio sample is received (and Fx is active)
      */
-    virtual void audioReactive(fl::audio::Reactive& reactive);
+    virtual void audioReactive(const AudioReactiveData* reactive);
 
     /**
      * Just called before the draw method of the Fx

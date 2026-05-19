@@ -96,11 +96,11 @@ bool ITParticles::setCustomConfiguration(JsonObjectConst obj)
     return true;
 }
 
-void ITParticles::audioReactive(fl::audio::Reactive& reactive)
+void ITParticles::audioReactive(const AudioReactiveData* reactive)
 {
     if(audioReactive_){
         //Spwan a random particule when a beat is detected
-        if(reactive.isBeat()){
+        if(reactive->beatDetected){
             spawnRandomParticle();
         }
     }

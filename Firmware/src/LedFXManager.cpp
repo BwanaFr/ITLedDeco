@@ -15,17 +15,17 @@ LedFXManager::~LedFXManager()
 {
 }
 
-void LedFXManager::draw(fl::span<CRGB> outputBuffer, fl::audio::Reactive* audioreactive)
+void LedFXManager::draw(fl::span<CRGB> outputBuffer, const AudioReactiveData* audioreactive)
 {
     int currId = fxEngine_.getCurrentFxId();
     LedFX* currLedFX = fxMap_[currId];
     if(audioreactive){
-        currLedFX->audioReactive(*audioreactive);
+        currLedFX->audioReactive(audioreactive);
         //Feed audio for requesting FX
         for(FXMap::iterator it=fxMap_.begin();it!=fxMap_.end();++it){
             if(it->second != currLedFX){
                 if(it->second->needAudio()){
-                    it->second->audioReactive(*audioreactive);
+                    it->second->audioReactive(audioreactive);
                 }
             }
         }

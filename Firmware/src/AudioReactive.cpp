@@ -6,12 +6,13 @@
 static const char* TAG = "AudioReactive";
 
 AudioReactive::AudioReactive(uint32_t fftSize) : fftSize_{fftSize}, fftSample_{0}, currentResult_{0},
-                                resultMutex_{nullptr}
+                                audioAvailable_{false}, resultMutex_{nullptr}
 {
     resultMutex_ = xSemaphoreCreateMutex();
     if(!resultMutex_){
         ESP_LOGE(TAG, "resultMutex_ creation failed!");
     }
+
 }
 
 AudioReactive::~AudioReactive()
@@ -28,6 +29,11 @@ const AudioReactiveData* AudioReactive::process(AudioInput* input)
         return nullptr;
     }
     if(count != fftSample_){
+        //Reset, compute some parameters
+        results_[0].fftHzPerBin = input->getSampleRate() / fftSize_;
+        results_[1].fftHzPerBin = results_[0].fftHzPerBin;
+
+        envelopeFollower_.setup(input->getSampleRate(), 0.1f, 50.0f);
         ESP_LOGI(TAG, "Samples count %u", count);
         //Reconfigure FFT
         fftSample_ = count;
@@ -44,11 +50,12 @@ const AudioReactiveData* AudioReactive::process(AudioInput* input)
         result->fftData = new float[fftSize_];
         result->fftDataSize = fftSize_;
     }
-    //TODO: Not needed to do it every time...
-    result->fftHzPerBin = input->getSampleRate() / fftSize_;
 
     //Computes signal RMS
     result->signalRMS = getRMS(samples, count);
+
+    //Envelope filter
+    result->filtered = envelopeFollower_.process(samples, count);
 
     //Performs FFT
     fft_.compute(samples, result->fftData);
@@ -58,9 +65,23 @@ const AudioReactiveData* AudioReactive::process(AudioInput* input)
 
     if(xSemaphoreTake(resultMutex_, portMAX_DELAY)){
         currentResult_ = nextResult;
+        audioAvailable_ = true;
         xSemaphoreGive(resultMutex_);
     }
     return result;
+}
+
+const AudioReactiveData* AudioReactive::getData()
+{
+    const AudioReactiveData* ret = nullptr;
+    if(audioAvailable_){
+        if(xSemaphoreTake(resultMutex_, portMAX_DELAY)){
+            ret = &results_[currentResult_];
+            audioAvailable_ = false;
+            xSemaphoreGive(resultMutex_);
+        }
+    }
+    return ret;
 }
 
 void AudioReactive::removeDC(AudioInput::audio_sample_t* samples, size_t count)
@@ -98,14 +119,46 @@ BeatDetector::~BeatDetector()
 {
 }
 
-
+// #define USE_ENVELOPE
+// #define USE_BA SS
 bool BeatDetector::process(const AudioInput::audio_sample_t* samples, size_t nbSamples, const AudioReactiveData* data)
 {
     float avg = lastValues_.get();
-    float diff = data->signalRMS / lastValues_;
-    bool ret = (diff > 1.6f);
-    // ESP_LOGI(TAG, "[%u]\t%f\t\t%f", lastValues_.size(), data->signalRMS, avg);
-    ESP_LOGI(TAG, "%c %f Mean : %f Diff : %f", (ret ? '+' : '-'), data->signalRMS, lastValues_.get(), diff);
-    lastValues_.add(data->signalRMS);
+#ifdef USE_ENVELOPE
+    //Use filtered bass value
+    float value = data->filtered;
+    float silenceThd = 6000.0f;
+    float threshold = 1.3f;
+#elif defined(USE_BASS)
+    //Only use bass bins
+    float value = 0.0f;
+    int startFreqBin = 80/data->fftHzPerBin;
+    int endFreqBin = (600/data->fftHzPerBin)+1;
+    float freqAmplitude = 0;
+    for(int i=startFreqBin;i<endFreqBin;++i){
+        freqAmplitude += data->fftData[i];
+    }
+    freqAmplitude /= (endFreqBin-startFreqBin);
+    value = std::sqrt(freqAmplitude);
+    float silenceThd = 400.0f;
+    float threshold = 1.4f;
+#else
+    //Use the signal RMS
+    float value = data->signalRMS;
+    float silenceThd = 6000.0f;
+    float threshold = 1.3f;
+#endif
+    float diff = value / lastValues_;
+    bool ret = (diff > threshold) && (value > silenceThd);
+    lastValues_.add(value);
+    unsigned long now = ::millis();
+    if(ret){
+        if((now - lastBeat_) < 100){
+            ret = false;
+        }
+        lastBeat_ = now;
+    }
+    int diffPc = (diff-1.0f)*100;
+    ESP_LOGI(TAG, "%c %f Mean : %f Diff : %d", (ret ? '+' : '-'), value, lastValues_.get(), diffPc);
     return ret;
 }

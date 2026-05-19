@@ -4,8 +4,8 @@
 #include <FastLED.h>
 #include <LedFX.hpp>
 #include <fl/fx/fx_engine.h>
-#include <fl/audio/audio_reactive.h>
 #include <ArduinoJson.h>
+#include <AudioReactive.hpp>
 
 /**
  * This class manage all FX aspects by using a fl::FxEngine underneath
@@ -14,7 +14,7 @@ class LedFXManager{
 public:
     LedFXManager(fl::u16 nbLeds);
     virtual ~LedFXManager();
-    void draw(fl::span<CRGB> outputBuffer, fl::audio::Reactive* audioreactive);
+    void draw(fl::span<CRGB> outputBuffer, const AudioReactiveData* audioreactive);
     void registerFx(LedFX* fx);
 
     /**

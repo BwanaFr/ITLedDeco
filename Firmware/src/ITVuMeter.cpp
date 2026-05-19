@@ -124,9 +124,10 @@ void ITVuMeter::beforeDraw()
     // }
 }
 
-void ITVuMeter::audioReactive(fl::audio::Reactive& reactive)
+void ITVuMeter::audioReactive(const AudioReactiveData* reactive)
 {
-    float be = reactive.getBassEnergy();
+    //TODO: Update this with FFT
+    float be = 0.0f; //reactive.getBassEnergy();
     //Gets max over buffer
     if(be > energyMax_[energyCell_]){
         energyMax_[energyCell_] = be;

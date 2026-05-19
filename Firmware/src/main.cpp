@@ -83,7 +83,7 @@ using namespace fl;
 static const char* TAG = "Main";
 
 //Audio objects for sound-reactive tentative
-AudioReactive audioReactive;
+AudioReactive audioReactive{256};
 AudioInput* audioInput = nullptr;
 int currentAudioInput = -1;
 bool audioConfigChanged = false;
@@ -161,7 +161,6 @@ void audioReactiveTask(void* param){
 #endif
             }
         }
-        yield();
     }
 }
 
@@ -191,7 +190,7 @@ void fastLedTask(void* param){
             }
         }
         lastBtn = btnState;
-        fxManager.draw(leds, nullptr);  //TODO: Change the audioreactive part
+        fxManager.draw(leds, audioReactive.getData());  //TODO: Change the audioreactive part
 
         FastLED.show();
         delay(10);

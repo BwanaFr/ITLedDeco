@@ -16,7 +16,7 @@ public:
     void setRandomPalette();
     void setPalette(int index);
     void getCustomConfiguration(JsonObject& obj) const override;
-    void audioReactive(fl::audio::Reactive& reactive) override;
+    void audioReactive(const AudioReactiveData* reactive) override;
     bool setCustomConfiguration(JsonObjectConst obj) override;
     void beforeDraw() override;
     bool needAudio() override;

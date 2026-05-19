@@ -55,7 +55,7 @@ public:
 
     bool setCustomConfiguration(JsonObjectConst obj) override;
 
-    void audioReactive(fl::audio::Reactive& reactive) override;
+    void audioReactive(const AudioReactiveData* reactive) override;
 
     void beforeDraw() override;
 private:

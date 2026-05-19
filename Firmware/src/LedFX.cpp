@@ -38,7 +38,7 @@ bool LedFX::setConfiguration(const JsonDocument& doc)
     return true;    //Accept setting...
 }
 
-void LedFX::audioReactive(fl::audio::Reactive& reactive)
+void LedFX::audioReactive(const AudioReactiveData* reactive)
 {
 }
 
