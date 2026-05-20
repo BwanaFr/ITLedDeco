@@ -1,4 +1,5 @@
 #include <Configuration.hpp>
+#include <Arduino.h>
 #include "esp_log.h"
 #include <LittleFS.h>
 
@@ -25,6 +26,7 @@ static const char* TAG = "Configuration";
 
 //TODO: Ugly, needs to be changed
 extern LedFXManager fxManager;
+extern AudioReactive audioReactive;
 
 DeviceConfiguration configuration;
 
@@ -33,7 +35,7 @@ DeviceConfiguration::DeviceConfiguration() :
         apSSID_{DEFAULT_AP_SSID}, apPass_{DEFAULT_AP_PASS},
         staSSID_{DEFAULT_STA_SSID}, staPass_{DEFAULT_STA_PASS},
         staIP_{DEFAULT_STA_IP}, staSubnet_{DEFAULT_STA_SUBNET},
-        staGateway_{DEFAULT_STA_GATEWAY}, audioAutoGain_{true},
+        staGateway_{DEFAULT_STA_GATEWAY},
         audioGain_{1.0f}, audioInput_{1},
         configTask_(nullptr)
 {
@@ -153,22 +155,23 @@ void DeviceConfiguration::fromJSON(const JsonDocument& doc, bool& changed, bool&
         valid = true;
     }
 
-    if(doc["inputAutoGain"] || doc["inputGain"] || doc["audioSource"]){
-        bool autoGain = audioAutoGain_;
+    if(doc["inputGain"] || doc["audioSource"]){
         float gain = audioGain_;
         int inp = audioInput_;
-        if(doc["inputAutoGain"].is<bool>()){
-            autoGain = doc["inputAutoGain"].as<bool>();
-        }
         if(doc["inputGain"].is<float>()){
             gain = doc["inputGain"].as<float>();
         }
         if(doc["audioSource"].is<int>()){
             inp = doc["audioSource"].as<int>();
         }
-        changed |= setAudioConfiguration(inp, autoGain, gain);
+        changed |= setAudioConfiguration(inp, gain);
         valid = true;
     }
+
+    JsonObjectConst obj = doc.as<JsonObjectConst>();
+    Configurable::CFG_RESULT res =  audioReactive.setConfiguration(obj);
+    valid |= (res != Configurable::CFG_RESULT::INVALID);
+    changed |= (res == Configurable::CFG_RESULT::CHANGED);
 }
 
 bool DeviceConfiguration::setAPSSID(const std::string& ssid, const std::string& pass, bool forceNotification)
@@ -263,15 +266,14 @@ void DeviceConfiguration::getStationIPConfiguration(IPAddress& ip, IPAddress& su
     }
 }
 
-bool DeviceConfiguration::setAudioConfiguration(int source, bool autoGain, float gain, bool forceNotification)
+bool DeviceConfiguration::setAudioConfiguration(int source, float gain, bool forceNotification)
 {
     bool changed = false;
     if(xSemaphoreTake(mutexData_, portMAX_DELAY ) == pdTRUE)
     {
-        if((audioInput_ != source) || (autoGain != audioAutoGain_) || (gain != audioGain_))
+        if((audioInput_ != source) || (gain != audioGain_))
         {
             audioInput_ = source;
-            audioAutoGain_ = autoGain;
             audioGain_ = gain;
             configurationChanged();
             changed = true;
@@ -285,12 +287,11 @@ bool DeviceConfiguration::setAudioConfiguration(int source, bool autoGain, float
 }
 
 
-void DeviceConfiguration::getAudioConfiguration(int& source, bool& autoGain, float& gain)
+void DeviceConfiguration::getAudioConfiguration(int& source, float& gain)
 {
     if(xSemaphoreTake(mutexData_, portMAX_DELAY ) == pdTRUE)
     {
         source = audioInput_;
-        autoGain = audioAutoGain_;
         gain = audioGain_;
         xSemaphoreGive(mutexData_);
     }
@@ -355,11 +356,12 @@ void DeviceConfiguration::configurationChanged()
 void DeviceConfiguration::toJSONString(std::string& str)
 {
     JsonDocument doc;
-    toJSON(doc);
+    JsonObject obj = doc.to<JsonObject>();
+    toJSON(obj);
     serializeJson(doc, str);
 }
 
-void DeviceConfiguration::toJSON(JsonDocument& doc, bool includeSecrets)
+void DeviceConfiguration::toJSON(JsonObject& doc, bool includeSecrets)
 {
     if(xSemaphoreTake(mutexData_, portMAX_DELAY ) == pdTRUE)
     {
@@ -377,9 +379,10 @@ void DeviceConfiguration::toJSON(JsonDocument& doc, bool includeSecrets)
             doc["staPass"] = std::string(staPass_.size(), ' ');
         }
 
-        doc["inputAutoGain"] = audioAutoGain_;
         doc["inputGain"] = audioGain_;
         doc["audioSource"] = audioInput_;
+
+        audioReactive.getConfiguration(doc);
 
         xSemaphoreGive(mutexData_);
     }
@@ -410,7 +413,8 @@ void DeviceConfiguration::write()
     ESP_LOGI(TAG, "Saving configuration to flash");
     File cfgFile = LittleFS.open(CFG_FILENAME, "w");
     JsonDocument doc;
-    toJSON(doc, true);
+    JsonObject obj = doc.as<JsonObject>();
+    toJSON(obj, true);
     serializeJson(doc, cfgFile);
     cfgFile.close();
     std::string str;

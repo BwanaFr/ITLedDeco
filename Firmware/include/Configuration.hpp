@@ -8,6 +8,85 @@
 #include <functional>
 #include <FreeRTOS.h>
 
+/**
+ * Class for implementing something configurable
+ */
+class Configurable {
+public:
+    Configurable() = default;
+    virtual ~Configurable() = default;
+
+    /**
+     * Enum for result of the configuration
+     */
+    enum class CFG_RESULT {
+        CHANGED = 0,        //!< Configuration changed
+        NOT_CHANGED,        //!< Configuration not changed
+        INVALID             //!< Invalid configuration
+    };
+
+    /**
+     * Gets configuration
+     * @param obj JSONObject to put the configuration in
+     */
+    virtual void getConfiguration(JsonObject& obj) const = 0;
+
+    /**
+     * Sets the configuration
+     * @param obj JSON object containing the configuration object
+     * @return Set result
+     */
+    virtual CFG_RESULT setConfiguration(JsonObjectConst obj) = 0;
+
+    //Several helpers to create settings in the JSON object
+    /**
+     * Creates a generic setting
+     */
+    template<typename T>
+    static JsonObject createSetting(JsonObject& obj, const char* name, const char* desc, T val){
+        JsonObject ret = obj[name].to<JsonObject>();
+        ret["desc"] = desc;
+        ret["val"] = val;
+        return ret;
+    }
+
+    /**
+     * Creates a slider
+     */
+    template<typename T>
+    static JsonObject createSetting(JsonObject& obj, const char* name, const char* desc, T val, T min){
+        JsonObject o = createSetting<T>(obj, name, desc, val);
+        o["min"] = min;
+        return o;
+    }
+
+    /**
+     * Creates a slider
+     */
+    template<typename T>
+    static JsonObject createSetting(JsonObject& obj, const char* name, const char* desc, T val, T min, T max){
+        JsonObject o = createSetting<T>(obj, name, desc, val, min);
+        o["max"] = max;
+        return o;
+    }
+
+    template<typename T>
+    static bool setValueIfSet(JsonObjectConst obj, const char* name, T& val){
+        JsonObjectConst v = obj[name];
+        if(v){
+            if(v["val"].is<T>()){
+                T newVal = v["val"].as<T>();
+                if(newVal != val){
+                    val = newVal;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+};
+
+
 class DeviceConfiguration {
 public:
     /**
@@ -88,20 +167,18 @@ public:
     /**
      * Sets the audio configuration
      * @param source Input source
-     * @param autoGain True to enable auto-gain
      * @param gain Audio input gain
      * @param forceNotification True to notifiy new configuration (even if not changed)
      * @return true if changed
      */
-    bool setAudioConfiguration(int source, bool autoGain, float gain, bool forceNotification = false);
+    bool setAudioConfiguration(int source, float gain, bool forceNotification = false);
 
     /**
      * Gets audio configuration
      * @param source Input source
-     * @param autoGain True to enable auto-gain
      * @param gain Audio input gain
      */
-    void getAudioConfiguration(int& source, bool& autoGain, float& gain);
+    void getAudioConfiguration(int& source, float& gain);
 
     /**
      * Create a JSON string of the configuration
@@ -113,7 +190,7 @@ public:
      * @param doc JSON document to fill
      * @param includeSecrets True to include ciphered passwords
      */
-    void toJSON(JsonDocument& doc, bool includeSecrets = false);
+    void toJSON(JsonObject& doc, bool includeSecrets = false);
 
     /**
      * Loads from JSON document
@@ -150,7 +227,6 @@ private:
     IPAddress staIP_;                           //!< Station Device IP if static
     IPAddress staSubnet_;                       //!< Device Subnet if static IP
     IPAddress staGateway_;                      //!< Next gateway if static IP
-    bool audioAutoGain_;                        //!< Audio auto-gain enabled
     float audioGain_;                           //!< Audio manual gain value
     int audioInput_;                            //!< Audio input
     std::vector<ParameterListener> listeners_;  //!< Configuration listeners
