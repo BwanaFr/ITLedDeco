@@ -159,6 +159,6 @@ bool BeatDetector::process(const AudioInput::audio_sample_t* samples, size_t nbS
         lastBeat_ = now;
     }
     int diffPc = (diff-1.0f)*100;
-    ESP_LOGI(TAG, "%c %f Mean : %f Diff : %d", (ret ? '+' : '-'), value, lastValues_.get(), diffPc);
+    // ESP_LOGI(TAG, "%c %f Mean : %f Diff : %d", (ret ? '+' : '-'), value, lastValues_.get(), diffPc);
     return ret;
 }

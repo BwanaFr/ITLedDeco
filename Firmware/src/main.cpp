@@ -190,10 +190,10 @@ void fastLedTask(void* param){
             }
         }
         lastBtn = btnState;
-        fxManager.draw(leds, audioReactive.getData());  //TODO: Change the audioreactive part
+        fxManager.draw(leds, audioReactive.getData());
 
         FastLED.show();
-        delay(10);
+        delay(20);
     }
 }
 
@@ -224,6 +224,7 @@ void setup()
         .setCorrection(LEDColorCorrection::TypicalLEDStrip);
     FastLED.addLeds<WS2812B, DATA_PIN_T, GRB>(leds, iCount, (LETTER_HEIGHT + LETTER_WIDTH))
         .setCorrection(LEDColorCorrection::TypicalLEDStrip);
+
 #ifdef DATA_PIN_ONBOARD
     //Internal led to show beat detection
     FastLED.addLeds<SK6812, DATA_PIN_ONBOARD, GRB>(&onBoardLed, 1);
