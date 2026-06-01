@@ -13,6 +13,7 @@ AudioReactive::AudioReactive(uint32_t fftSize) : fftSize_{fftSize}, fftSample_{0
         ESP_LOGE(TAG, "resultMutex_ creation failed!");
     }
 
+    prevFFT_.resize(fftSize);
 }
 
 AudioReactive::~AudioReactive()
@@ -23,7 +24,7 @@ AudioReactive::~AudioReactive()
 const AudioReactiveData* AudioReactive::process(AudioInput* input)
 {
     size_t count = 0;
-    AudioInput::audio_sample_t* samples = input->readSamples(count);
+    AudioInput::audio_sample_t* samples = input->read(count);
     if(!samples || (count == 0)){
         //No samples
         return nullptr;
@@ -33,7 +34,7 @@ const AudioReactiveData* AudioReactive::process(AudioInput* input)
         results_[0].fftHzPerBin = input->getSampleRate() / fftSize_;
         results_[1].fftHzPerBin = results_[0].fftHzPerBin;
 
-        envelopeFollower_.setup(input->getSampleRate(), 0.1f, 50.0f);
+        envelopeFollower_.setup(input->getSampleRate(), 1.0f, 50.0f);
         ESP_LOGI(TAG, "Samples count %u", count);
         //Reconfigure FFT
         fftSample_ = count;
@@ -84,6 +85,22 @@ const AudioReactiveData* AudioReactive::getData()
     return ret;
 }
 
+void AudioReactive::getConfiguration(JsonObject& obj) const
+{
+    JsonObject cfgObj = obj["AudioReactive"].to<JsonObject>();
+    beatDetector_.getConfiguration(cfgObj);
+}
+
+Configurable::CFG_RESULT AudioReactive::setConfiguration(JsonObjectConst obj)
+{
+    ESP_LOGI(TAG, "Setting audio reactive configuration");
+    if(obj["AudioReactive"].is<JsonObjectConst>()){
+        JsonObjectConst cfgObj = obj["AudioReactive"].as<JsonObjectConst>();
+        return beatDetector_.setConfiguration(cfgObj);
+    }
+    return CFG_RESULT::NOT_CHANGED;
+}
+
 void AudioReactive::removeDC(AudioInput::audio_sample_t* samples, size_t count)
 {
     AudioInput::audio_sample_t mean = getMean(samples, count);
@@ -111,7 +128,7 @@ AudioInput::audio_sample_t AudioReactive::getRMS(const AudioInput::audio_sample_
     return std::sqrt(ret);
 }
 
-BeatDetector::BeatDetector() : lastBeat_{0}
+BeatDetector::BeatDetector() : lastBeat_{0}, startFreq_{30}, endFreq_{180}, threshold_{20.0f}, sensitivity_{1.4f}
 {
 }
 
@@ -119,36 +136,42 @@ BeatDetector::~BeatDetector()
 {
 }
 
-// #define USE_ENVELOPE
-// #define USE_BA SS
+#if defined(USE_BASS)
+bool BeatDetector::process(const AudioInput::audio_sample_t* samples, size_t nbSamples, const AudioReactiveData* data)
+{
+    //Only use bass bins
+    float value = getSpectralFlux(startFreq_, endFreq_, data);
+    float prevMean = lastValues_;
+    bool ret = false;
+    if(prevMean > 0.0f){
+        float diff = (value/prevMean);
+        ret = ((value > threshold_) && (diff>=sensitivity_) && (lastValues_.getLatest() < threshold_));
+        // ESP_LOGI(TAG, "%c %f Mean : %f \t\t Last: %f", (ret ? '+' : '-'), value, prevMean, lastValues_.getLatest());
+    }else{
+        ret = (value > (1.5f * threshold_));
+    }
+
+    lastValues_.add(value);
+    unsigned long now = ::millis();
+    if(ret){
+        //250ms between each beat give use a 240 BPM max :)
+        if((now - lastBeat_) < 100){
+            ret = false;
+        }else{
+            lastBeat_ = now;
+        }
+    }
+    return ret;
+}
+#elif defined(USE_ENVELOPE)
 bool BeatDetector::process(const AudioInput::audio_sample_t* samples, size_t nbSamples, const AudioReactiveData* data)
 {
     float avg = lastValues_.get();
-#ifdef USE_ENVELOPE
     //Use filtered bass value
     float value = data->filtered;
-    float silenceThd = 6000.0f;
-    float threshold = 1.3f;
-#elif defined(USE_BASS)
-    //Only use bass bins
-    float value = 0.0f;
-    int startFreqBin = 80/data->fftHzPerBin;
-    int endFreqBin = (600/data->fftHzPerBin)+1;
-    float freqAmplitude = 0;
-    for(int i=startFreqBin;i<endFreqBin;++i){
-        freqAmplitude += data->fftData[i];
-    }
-    freqAmplitude /= (endFreqBin-startFreqBin);
-    value = std::sqrt(freqAmplitude);
-    float silenceThd = 400.0f;
-    float threshold = 1.4f;
-#else
-    //Use the signal RMS
-    float value = data->signalRMS;
-    float silenceThd = 6000.0f;
-    float threshold = 1.3f;
-#endif
-    float diff = value / lastValues_;
+    float silenceThd = 0.5f;
+    float threshold = 1.22f;
+    float diff = lastValues_ == 0.0f ? value*2.0f : value / lastValues_;
     bool ret = (diff > threshold) && (value > silenceThd);
     lastValues_.add(value);
     unsigned long now = ::millis();
@@ -159,6 +182,78 @@ bool BeatDetector::process(const AudioInput::audio_sample_t* samples, size_t nbS
         lastBeat_ = now;
     }
     int diffPc = (diff-1.0f)*100;
-    ESP_LOGI(TAG, "%c %f Mean : %f Diff : %d", (ret ? '+' : '-'), value, lastValues_.get(), diffPc);
+    ESP_LOGI(TAG, "%c %f Mean : %f Diff : %f", (ret ? '+' : '-'), value, lastValues_.get(), diff);
     return ret;
+}
+#else
+bool BeatDetector::process(const AudioInput::audio_sample_t* samples, size_t nbSamples, const AudioReactiveData* data)
+{
+    //Use the signal RMS
+    float value = data->signalRMS;
+    float silenceThd = 0.5f;
+    float threshold = 1.3f;
+    float diff = lastValues_ == 0.0f ? value*2.0f : value / lastValues_;
+    bool ret = (diff > threshold) && (value > silenceThd);
+    lastValues_.add(value);
+    unsigned long now = ::millis();
+    if(ret){
+        if((now - lastBeat_) < 100){
+            ret = false;
+        }
+        lastBeat_ = now;
+    }
+    int diffPc = (diff-1.0f)*100;
+    ESP_LOGI(TAG, "%c %f Mean : %f Diff : %f", (ret ? '+' : '-'), value, lastValues_.get(), diff);
+    return ret;
+}
+#endif
+
+float BeatDetector::getSpectralFlux(float startFreq, float endFreq, const AudioReactiveData* data)
+{
+    float ret = 0.0f;
+    if(data->fftDataSize != prevFFT_.size()){
+        prevFFT_.resize(data->fftDataSize);
+    }
+
+    int startFreqBin = startFreq/data->fftHzPerBin;
+    int endFreqBin = (endFreq/data->fftHzPerBin)+1;
+
+    for (std::size_t i = startFreqBin; i < endFreqBin; i++) {
+        float diff = data->fftData[i] - prevFFT_[i];
+        if (diff > 0.0f) {
+            ret += diff;
+        }
+    }
+    ret /= static_cast<float>(endFreqBin-startFreqBin);
+
+    //Save previous FFT
+    for(std::size_t i=0;i<data->fftDataSize; ++i){
+        prevFFT_[i] = data->fftData[i];
+    }
+    return ret;
+}
+
+void BeatDetector::getConfiguration(JsonObject& obj) const
+{
+    JsonObject cfgObj = obj["BeatDetector"].to<JsonObject>();
+    createSetting(cfgObj, "startFreq", "Start frequency [Hz]", startFreq_, 0.0f, 10000.0f);
+    createSetting(cfgObj, "endFreq", "End frequency [Hz]", endFreq_, 0.0f, 10000.0f);
+    createSetting(cfgObj, "threshold", "Threshold", threshold_, 0.0f, 100.0f);
+    createSetting(cfgObj, "sensitivity", "Sensitivity", sensitivity_, 0.0f, 50.0f);
+}
+
+Configurable::CFG_RESULT BeatDetector::setConfiguration(JsonObjectConst obj)
+{
+    if(obj["BeatDetector"].is<JsonObjectConst>()){
+        JsonObjectConst cfgObj = obj["BeatDetector"].as<JsonObjectConst>();
+        bool changed = false;
+        changed |= setValueIfSet(cfgObj, "startFreq", startFreq_);
+        changed |= setValueIfSet(cfgObj, "endFreq", endFreq_);
+        changed |= setValueIfSet(cfgObj, "threshold", threshold_);
+        changed |= setValueIfSet(cfgObj, "sensitivity", sensitivity_);
+        if(changed){
+            return CFG_RESULT::CHANGED;
+        }
+    }
+    return CFG_RESULT::NOT_CHANGED;
 }

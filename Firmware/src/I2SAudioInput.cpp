@@ -92,7 +92,7 @@ void I2SAudioInput::start()
     // Create I2S channel configuration with DMA buffer settings
     i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(
         i2s_port, I2S_ROLE_MASTER);
-    chan_cfg.dma_frame_num = rxBufferSize_;
+    chan_cfg.dma_frame_num = rxBufferSize_; //I don't really understand what to put here....
 
     // Create RX channel
     ESP_ERROR_CHECK(i2s_new_channel(&chan_cfg, nullptr, &rx_handle_));
@@ -141,15 +141,16 @@ AudioInput::audio_sample_t* I2SAudioInput::readSamples(std::size_t& size)
         return nullptr;  // Invalid sample
     }
 
+    //Normalize the signal from 0.0 to 1.0
     size_t nbSamples = 0;
     if(slotMask_ == I2S_STD_SLOT_BOTH){
         //Convert stereo to mono
         for(size_t i=0;i<count;i+=2){
-            buffer_[nbSamples++] = (static_cast<float>(rxBuffer_[i]) + static_cast<float>(rxBuffer_[i+1]))/2.0f;
+            buffer_[nbSamples++] = (static_cast<float>(rxBuffer_[i]) + static_cast<float>(rxBuffer_[i+1]))/static_cast<float>((1<<16)); //Divide by 2.0f;
         }
     }else{
         for(size_t i=0;i<count;++i){
-            buffer_[nbSamples++] = static_cast<float>(rxBuffer_[i]);
+            buffer_[nbSamples++] = static_cast<float>(rxBuffer_[i]) / static_cast<float>((1<<15));
         }
     }
     size = nbSamples;

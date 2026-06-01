@@ -119,15 +119,6 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="row mb-3 align-self-center">
-                            <label for="inputAutoGain" class="col-sm-1 col-form-label">Input auto-gain</label>
-                            <div class="col-sm-3">
-                                <input type="checkbox" id="inputAutoGain" onchange="toggleAutoGain();" />
-                                <div class="invalid-feedback">
-                                    Please provide a valid value.
-                                </div>
-                            </div>
-                        </div>
                         <div class="row mb-3 align-self-center" id="inputGainDiv">
                             <label for="inputGain" class="col-sm-1 col-form-label">Input gain (<output id="inputGainVal"></output>)</label>
                             <div class="col-sm-3">
@@ -213,7 +204,6 @@
                     document.getElementById("useDHCP").checked = true;
                 }
                 toggleDHCP();
-                toggleAutoGain();
                 updateGain();
             })
             .catch((error) => {
@@ -338,11 +328,6 @@
         document.getElementById("staIPDiv").hidden = en;
         document.getElementById("staSubnetDiv").hidden = en;
         document.getElementById("staGatewayDiv").hidden = en;
-    }
-
-    function toggleAutoGain(){
-        let en = document.getElementById("inputAutoGain").checked;
-        document.getElementById("inputGainDiv").hidden = en;
     }
 
     function updateGain(){

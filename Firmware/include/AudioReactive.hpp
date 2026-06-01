@@ -4,8 +4,16 @@
 #include "esp32s3_dsp.h"
 #include "FreeRTOS.h"
 #include <array>
+#include <deque>
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
+#include "Configuration.hpp"
+
+//Beat detection algo selection
+// #define USE_ENVELOPE
+#define USE_BASS
+
 /**
  * This structure represents a audio-reactive data results
  */
@@ -68,6 +76,11 @@ public:
         return count_;
     }
 
+    T getLatest(){
+        std::size_t index = index_ == 0 ? N-1 : index_-1;
+        return buffer_[index];
+    }
+
 private:
     std::array<T, N> buffer_;
     std::size_t count_;
@@ -118,7 +131,7 @@ protected:
 /**
  * Class for detecting beat
  */
-class BeatDetector{
+class BeatDetector : public Configurable{
 public:
     BeatDetector();
     virtual ~BeatDetector();
@@ -131,16 +144,33 @@ public:
      * @return true if a beat is detected
      */
     bool process(const AudioInput::audio_sample_t* samples, size_t nbSamples, const AudioReactiveData* data);
-private:
-    unsigned long lastBeat_;                                    //!< Last beat detection
-    MovingAverage<AudioInput::audio_sample_t, 1> lastValues_;   //!< Last values
 
+    void getConfiguration(JsonObject& obj) const override;
+    CFG_RESULT setConfiguration(JsonObjectConst obj) override;
+
+
+private:
+    unsigned long lastBeat_;                                    //!< Last beat detection timestamp
+    float startFreq_;                                           //!< Bass analysis start frequency
+    float endFreq_;                                             //!< Bass analysis end frequency
+    float threshold_;                                           //!< Flux threshold
+    float sensitivity_;                                         //!< Flux sensitivity
+#if defined(USE_BASS)
+    MovingAverage<AudioInput::audio_sample_t, 10> lastValues_;   //!< Last values
+#else
+    MovingAverage<AudioInput::audio_sample_t, 1> lastValues_;   //!< Last values
+#endif
+    std::deque<float> prevFFT_;                                 //!< Previous FFT bins
+    /**
+     * Computes spectral flux
+     */
+    float getSpectralFlux(float startFreq, float endFreq, const AudioReactiveData* data);
 };
 
 /**
  * Tentative of implementing a small (and smart) audioreactive
  */
-class AudioReactive
+class AudioReactive : public Configurable
 {
 public:
     AudioReactive(uint32_t fftSize=512);
@@ -158,6 +188,10 @@ public:
      */
     const AudioReactiveData* getData();
 
+
+    void getConfiguration(JsonObject& obj) const override;
+    CFG_RESULT setConfiguration(JsonObjectConst obj) override;
+
 private:
     ESP32S3_FFT fft_;                                               //!< Object to compute FFT
     uint32_t fftSize_;                                              //!< Number of bins in FFT results
@@ -168,6 +202,8 @@ private:
     AudioReactiveData results_[2];                                  //!< Result double-buffer
     BeatDetector beatDetector_;                                     //!< Beat detector
     EnvelopeFollower<AudioInput::audio_sample_t> envelopeFollower_; //!< Envelope follower filter
+    std::deque<float> prevFFT_;                                     //!< Previous FFT bins
+
     /**
      * Removes DC offset from samples
      */
@@ -182,4 +218,5 @@ private:
      * Gets mean of the signal
      */
     static AudioInput::audio_sample_t getMean(const AudioInput::audio_sample_t* buffer, size_t count);
+
 };

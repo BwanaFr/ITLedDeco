@@ -106,7 +106,7 @@ void configureAudioInput(){
     int input;
     bool autoGainEnabled;
     float audioGain;
-    configuration.getAudioConfiguration(input, autoGainEnabled, audioGain);
+    configuration.getAudioConfiguration(input, audioGain);
 
     bool micInput = (input == 0);
     ESP_LOGI(TAG, "Configuring audio -> Gain : %f, Auto-gain : %u, Input : %s", audioGain, autoGainEnabled, (micInput ? "Mic" : "Line"));
@@ -176,7 +176,9 @@ void fastLedTask(void* param){
 
     unsigned long lastSample = ::micros();
 
+    const TickType_t updateRateMs = 20/portTICK_PERIOD_MS;
     while(true){
+        TickType_t lastWakeTime = xTaskGetTickCount();
         bool btnState = ::digitalRead(BTN_PIN);
         if(!btnState && (btnState != lastBtn)){
             if(!fxManager.isAutoChange()){
@@ -190,10 +192,11 @@ void fastLedTask(void* param){
             }
         }
         lastBtn = btnState;
-        fxManager.draw(leds, audioReactive.getData());  //TODO: Change the audioreactive part
+        fxManager.draw(leds, audioReactive.getData());
 
         FastLED.show();
-        delay(10);
+        //Try to keep a 50Hz update rate
+        vTaskDelayUntil(&lastWakeTime, updateRateMs);
     }
 }
 
@@ -224,6 +227,7 @@ void setup()
         .setCorrection(LEDColorCorrection::TypicalLEDStrip);
     FastLED.addLeds<WS2812B, DATA_PIN_T, GRB>(leds, iCount, (LETTER_HEIGHT + LETTER_WIDTH))
         .setCorrection(LEDColorCorrection::TypicalLEDStrip);
+
 #ifdef DATA_PIN_ONBOARD
     //Internal led to show beat detection
     FastLED.addLeds<SK6812, DATA_PIN_ONBOARD, GRB>(&onBoardLed, 1);
@@ -254,13 +258,4 @@ void setup()
 void loop()
 {
     vTaskDelete(NULL);
-}
-
-float getAudioGain(){
-    // if(autoGainEnabled){
-    //     return autoGain.getGain();
-    // }else{
-    //     return audioGain;
-    // }
-    return 0.0f;
 }
