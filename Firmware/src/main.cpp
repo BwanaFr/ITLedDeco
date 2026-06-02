@@ -80,6 +80,9 @@ using namespace fl;
 #define EXT_I2S_MCLK_PIN GPIO_NUM_1     // Masterc lock (MCLK)
 #endif
 
+//Updates LED at 50Hz
+#define LED_UPDATE_PERIOD_MS 20
+
 static const char* TAG = "Main";
 
 //Audio objects for sound-reactive tentative
@@ -88,18 +91,24 @@ AudioInput* audioInput = nullptr;
 int currentAudioInput = -1;
 bool audioConfigChanged = false;
 
+#ifdef DATA_PIN_ONBOARD
+//Optionnal onboard LED
 CRGB onBoardLed;
+#endif
 
-CRGB leds[SCREEN_WIDTH * SCREEN_HEIGHT + 1];    //Do we need to allocate all 2D LEDs????
+//Leds values (+1 to have a default trash LED for mapping)
+//We are (don't know why, to be seen in FastLed code) obliged to allocate the full 2D array
+CRGB leds[SCREEN_WIDTH * SCREEN_HEIGHT + 1];
 
 XYMap xymap = XYMap::constructWithUserFunction(SCREEN_WIDTH, SCREEN_HEIGHT, IT::itUserMapFunc);
 
+//Effects used by this
 ITSparks sparks(xymap);
 FLParticles particles(NB_STRIP_LEDS, 2);
 FLNoisePalette noisePalette(xymap);
 ITVuMeter itVuMeter(xymap);
-ITParticles itParticles(NB_STRIP_LEDS + 1, 5);
-
+ITParticles itParticles(NB_STRIP_LEDS, 5);
+//Our FX manager to switch between effects
 LedFXManager fxManager{SCREEN_WIDTH * SCREEN_HEIGHT};
 
 void configureAudioInput(){
@@ -153,6 +162,7 @@ void audioReactiveTask(void* param){
             audioConfigChanged = false;
         }
         if(audioInput){
+            //Calling process will wait for samples to be ready on ADC
             const AudioReactiveData* data = audioReactive.process(audioInput);
             if(data){
                 // ESP_LOGI("Audio", "RMS: %f", data->signalRMS);
@@ -160,6 +170,9 @@ void audioReactiveTask(void* param){
                 ::digitalWrite(LED_PIN, data->beatDetected);
 #endif
             }
+        }else{
+            //Do nothing, yield the CPU
+            delay(5);
         }
     }
 }
@@ -176,7 +189,7 @@ void fastLedTask(void* param){
 
     unsigned long lastSample = ::micros();
 
-    const TickType_t updateRateMs = 20/portTICK_PERIOD_MS;
+    const TickType_t updateRateMs = LED_UPDATE_PERIOD_MS/portTICK_PERIOD_MS;
     while(true){
         TickType_t lastWakeTime = xTaskGetTickCount();
         bool btnState = ::digitalRead(BTN_PIN);
@@ -223,12 +236,12 @@ void setup()
     //Setup network
     NetworkConfigurator::startNetwork();
 
+    //Adds LEDs to FastLED
     const int iCount = 2*LETTER_WIDTH + LETTER_HEIGHT;
     FastLED.addLeds<WS2812B, DATA_PIN_I, GRB>(leds, 0, iCount)
         .setCorrection(LEDColorCorrection::TypicalLEDStrip);
     FastLED.addLeds<WS2812B, DATA_PIN_T, GRB>(leds, iCount, (LETTER_HEIGHT + LETTER_WIDTH))
         .setCorrection(LEDColorCorrection::TypicalLEDStrip);
-
 #ifdef DATA_PIN_ONBOARD
     //Internal led to show beat detection
     FastLED.addLeds<SK6812, DATA_PIN_ONBOARD, GRB>(&onBoardLed, 1);
@@ -249,8 +262,8 @@ void setup()
     //Removes logs from FXManager
     esp_log_level_set("LedFXManager", ESP_LOG_WARN);
 
-    //Create the FreeRTOS OS with a stack of 16KB
-    xTaskCreateUniversal(fastLedTask, "FastLed", 16*1024, nullptr, 1, NULL, 1);
+    //Create the FreeRTOS OS with a stack of 4KB (seems to fit)
+    xTaskCreateUniversal(fastLedTask, "FastLed", 4096, nullptr, 1, NULL, 1);
 
     //Create a task for processing audio input
     xTaskCreate(audioReactiveTask, "Audio", 4096, nullptr, 1, NULL);
