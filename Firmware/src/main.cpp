@@ -204,6 +204,7 @@ void setup()
 {
     //Starts serial
     Serial.begin(115200);
+    ::delay(5000);
 
     //Button pin
     ::pinMode(BTN_PIN, INPUT_PULLUP);

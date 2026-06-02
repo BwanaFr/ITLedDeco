@@ -19,17 +19,27 @@ public:
     /**
      * Enum for result of the configuration
      */
-    enum class CFG_RESULT {
-        CHANGED = 0,        //!< Configuration changed
-        NOT_CHANGED,        //!< Configuration not changed
-        INVALID             //!< Invalid configuration
+    class CFG_RESULT {
+    public:
+        CFG_RESULT(bool changed = false, bool invalid = false);
+        virtual ~CFG_RESULT() = default;
+        operator bool() const;
+        CFG_RESULT& operator |=(const CFG_RESULT& other);
+        inline bool invalid() const { return invalid_; };
+        inline bool changed() const { return changed_; };
+
+    private:
+        bool changed_;
+        bool invalid_;
     };
 
     /**
      * Gets configuration
      * @param obj JSONObject to put the configuration in
+     * @param full Set to true to have full output (min, max, description)
+     * @param withSecrets Sets secrets in the JSON document
      */
-    virtual void getConfiguration(JsonObject& obj) const = 0;
+    virtual void getConfiguration(JsonObject& obj, bool full = true, bool withSecrets = false) const = 0;
 
     /**
      * Sets the configuration
@@ -43,19 +53,24 @@ public:
      * Creates a generic setting
      */
     template<typename T>
-    static JsonObject createSetting(JsonObject& obj, const char* name, const char* desc, T val){
-        JsonObject ret = obj[name].to<JsonObject>();
-        ret["desc"] = desc;
-        ret["val"] = val;
-        return ret;
+    static JsonObject createSetting(JsonObject& obj, bool full, const char* name, const char* desc, T val){
+        if(full){
+            JsonObject ret = obj[name].to<JsonObject>();
+            ret["desc"] = desc;
+            ret["val"] = val;
+            return ret;
+        }else{
+            obj[name] = val;
+            return obj[name];
+        }
     }
 
     /**
      * Creates a slider
      */
     template<typename T>
-    static JsonObject createSetting(JsonObject& obj, const char* name, const char* desc, T val, T min){
-        JsonObject o = createSetting<T>(obj, name, desc, val);
+    static JsonObject createSetting(JsonObject& obj, bool full, const char* name, const char* desc, T val, T min){
+        JsonObject o = createSetting<T>(obj, full, name, desc, val);
         o["min"] = min;
         return o;
     }
@@ -64,25 +79,33 @@ public:
      * Creates a slider
      */
     template<typename T>
-    static JsonObject createSetting(JsonObject& obj, const char* name, const char* desc, T val, T min, T max){
-        JsonObject o = createSetting<T>(obj, name, desc, val, min);
+    static JsonObject createSetting(JsonObject& obj, bool full, const char* name, const char* desc, T val, T min, T max){
+        JsonObject o = createSetting<T>(obj, full, name, desc, val, min);
         o["max"] = max;
         return o;
     }
 
     template<typename T>
-    static bool setValueIfSet(JsonObjectConst obj, const char* name, T& val){
-        JsonObjectConst v = obj[name];
-        if(v){
-            if(v["val"].is<T>()){
-                T newVal = v["val"].as<T>();
-                if(newVal != val){
-                    val = newVal;
-                    return true;
+    static CFG_RESULT setValueIfSet(JsonObjectConst obj, const char* name, T& val){
+        if(obj[name].is<T>()){
+            T newVal = obj[name].as<T>();
+            if(newVal != val){
+                val = newVal;
+                return CFG_RESULT(true);
+            }
+        }else{
+            JsonObjectConst v = obj[name];
+            if(v){
+                if(v["val"].is<T>()){
+                    T newVal = v["val"].as<T>();
+                    if(newVal != val){
+                        val = newVal;
+                        return CFG_RESULT(true);
+                    }
                 }
             }
         }
-        return false;
+        return CFG_RESULT();
     }
 };
 
@@ -183,14 +206,15 @@ public:
     /**
      * Create a JSON string of the configuration
      */
-    void toJSONString(std::string& str);
+    void toJSONString(std::string& str, bool full = true);
 
     /**
      * Fill configuration to JSON document
      * @param doc JSON document to fill
+     * @param full Gets full output
      * @param includeSecrets True to include ciphered passwords
      */
-    void toJSON(JsonObject& doc, bool includeSecrets = false);
+    void toJSON(JsonObject& doc, bool full = true, bool includeSecrets = false);
 
     /**
      * Loads from JSON document

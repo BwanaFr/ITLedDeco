@@ -85,20 +85,15 @@ const AudioReactiveData* AudioReactive::getData()
     return ret;
 }
 
-void AudioReactive::getConfiguration(JsonObject& obj) const
+void AudioReactive::getConfiguration(JsonObject& obj, bool full, bool withSecrets) const
 {
-    JsonObject cfgObj = obj["AudioReactive"].to<JsonObject>();
-    beatDetector_.getConfiguration(cfgObj);
+    beatDetector_.getConfiguration(obj, full, withSecrets);
 }
 
 Configurable::CFG_RESULT AudioReactive::setConfiguration(JsonObjectConst obj)
 {
     ESP_LOGI(TAG, "Setting audio reactive configuration");
-    if(obj["AudioReactive"].is<JsonObjectConst>()){
-        JsonObjectConst cfgObj = obj["AudioReactive"].as<JsonObjectConst>();
-        return beatDetector_.setConfiguration(cfgObj);
-    }
-    return CFG_RESULT::NOT_CHANGED;
+    return beatDetector_.setConfiguration(obj);
 }
 
 void AudioReactive::removeDC(AudioInput::audio_sample_t* samples, size_t count)
@@ -233,27 +228,20 @@ float BeatDetector::getSpectralFlux(float startFreq, float endFreq, const AudioR
     return ret;
 }
 
-void BeatDetector::getConfiguration(JsonObject& obj) const
+void BeatDetector::getConfiguration(JsonObject& obj, bool full, bool withSecrets) const
 {
-    JsonObject cfgObj = obj["BeatDetector"].to<JsonObject>();
-    createSetting(cfgObj, "startFreq", "Start frequency [Hz]", startFreq_, 0.0f, 10000.0f);
-    createSetting(cfgObj, "endFreq", "End frequency [Hz]", endFreq_, 0.0f, 10000.0f);
-    createSetting(cfgObj, "threshold", "Threshold", threshold_, 0.0f, 100.0f);
-    createSetting(cfgObj, "sensitivity", "Sensitivity", sensitivity_, 0.0f, 50.0f);
+    createSetting(obj, full, "bd_startFreq", "Beat detect. start frequency [Hz]", startFreq_, 0.0f, 10000.0f);
+    createSetting(obj, full, "bd_endFreq", "Beat detect. end frequency [Hz]", endFreq_, 0.0f, 10000.0f);
+    createSetting(obj, full, "bd_threshold", "Beat detect. threshold", threshold_, 0.0f, 100.0f);
+    createSetting(obj, full, "bd_sensitivity", "Beat detect. sensitivity", sensitivity_, 0.0f, 50.0f);
 }
 
 Configurable::CFG_RESULT BeatDetector::setConfiguration(JsonObjectConst obj)
 {
-    if(obj["BeatDetector"].is<JsonObjectConst>()){
-        JsonObjectConst cfgObj = obj["BeatDetector"].as<JsonObjectConst>();
-        bool changed = false;
-        changed |= setValueIfSet(cfgObj, "startFreq", startFreq_);
-        changed |= setValueIfSet(cfgObj, "endFreq", endFreq_);
-        changed |= setValueIfSet(cfgObj, "threshold", threshold_);
-        changed |= setValueIfSet(cfgObj, "sensitivity", sensitivity_);
-        if(changed){
-            return CFG_RESULT::CHANGED;
-        }
-    }
-    return CFG_RESULT::NOT_CHANGED;
+    CFG_RESULT ret;
+    ret |= setValueIfSet(obj, "bd_startFreq", startFreq_);
+    ret |= setValueIfSet(obj, "bd_endFreq", endFreq_);
+    ret |= setValueIfSet(obj, "bd_threshold", threshold_);
+    ret |= setValueIfSet(obj, "bd_sensitivity", sensitivity_);
+    return ret;
 }

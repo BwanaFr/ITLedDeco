@@ -30,6 +30,24 @@ extern AudioReactive audioReactive;
 
 DeviceConfiguration configuration;
 
+
+Configurable::CFG_RESULT::CFG_RESULT(bool changed, bool invalid) : changed_{changed}, invalid_{invalid}
+{
+
+}
+
+Configurable::CFG_RESULT::operator bool() const
+{
+    return !invalid_;
+}
+
+Configurable::CFG_RESULT& Configurable::CFG_RESULT::operator |=(const Configurable::CFG_RESULT& other)
+{
+    changed_ |= other.changed_;
+    invalid_ |= other.invalid_;
+    return *this;
+}
+
 DeviceConfiguration::DeviceConfiguration() :
         lastChange_{0}, lastFxChange_{0}, mutexData_{nullptr}, mutexListeners_{nullptr},
         apSSID_{DEFAULT_AP_SSID}, apPass_{DEFAULT_AP_PASS},
@@ -170,8 +188,16 @@ void DeviceConfiguration::fromJSON(const JsonDocument& doc, bool& changed, bool&
 
     JsonObjectConst obj = doc.as<JsonObjectConst>();
     Configurable::CFG_RESULT res =  audioReactive.setConfiguration(obj);
-    valid |= (res != Configurable::CFG_RESULT::INVALID);
-    changed |= (res == Configurable::CFG_RESULT::CHANGED);
+    valid |= !res.invalid();
+    changed |= res.changed();
+    //TODO: Change this piece of code to support other configs
+    if(res.changed()){
+        if(xSemaphoreTake(mutexData_, portMAX_DELAY ) == pdTRUE)
+        {
+            configurationChanged();
+            xSemaphoreGive(mutexData_);
+        }
+    }
 }
 
 bool DeviceConfiguration::setAPSSID(const std::string& ssid, const std::string& pass, bool forceNotification)
@@ -353,15 +379,15 @@ void DeviceConfiguration::configurationChanged()
 /**
  * Create a JSON version of the configuration
  */
-void DeviceConfiguration::toJSONString(std::string& str)
+void DeviceConfiguration::toJSONString(std::string& str, bool full)
 {
     JsonDocument doc;
     JsonObject obj = doc.to<JsonObject>();
-    toJSON(obj);
+    toJSON(obj, full);
     serializeJson(doc, str);
 }
 
-void DeviceConfiguration::toJSON(JsonObject& doc, bool includeSecrets)
+void DeviceConfiguration::toJSON(JsonObject& doc, bool full, bool includeSecrets)
 {
     if(xSemaphoreTake(mutexData_, portMAX_DELAY ) == pdTRUE)
     {
@@ -382,7 +408,7 @@ void DeviceConfiguration::toJSON(JsonObject& doc, bool includeSecrets)
         doc["inputGain"] = audioGain_;
         doc["audioSource"] = audioInput_;
 
-        audioReactive.getConfiguration(doc);
+        audioReactive.getConfiguration(doc, full, includeSecrets);
 
         xSemaphoreGive(mutexData_);
     }
@@ -413,12 +439,12 @@ void DeviceConfiguration::write()
     ESP_LOGI(TAG, "Saving configuration to flash");
     File cfgFile = LittleFS.open(CFG_FILENAME, "w");
     JsonDocument doc;
-    JsonObject obj = doc.as<JsonObject>();
-    toJSON(obj, true);
-    serializeJson(doc, cfgFile);
+    JsonObject obj = doc.to<JsonObject>();
+    toJSON(obj, false, true);
+    serializeJson(obj, cfgFile);
     cfgFile.close();
     std::string str;
-    serializeJson(doc, str);
+    serializeJson(obj, str);
     ESP_LOGI(TAG, "%s", str.c_str());
 }
 

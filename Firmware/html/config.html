@@ -121,12 +121,18 @@
                         </div>
                         <div class="row mb-3 align-self-center" id="inputGainDiv">
                             <label for="inputGain" class="col-sm-1 col-form-label">Input gain (<output id="inputGainVal"></output>)</label>
-                            <div class="col-sm-3">
-                                <input type="range" id="inputGain" min="0.1" max="32" step="0.1" oninput="updateGain();" />
+                            <div class="col-sm-3 align-self-end">
+                                <input type="range" id="inputGain" class="form-range" min="0.1" max="32" step="0.1" oninput="updateGain();" />
                                 <div class="invalid-feedback">
                                     Please provide a valid value.
                                 </div>
                             </div>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend class="mt-2">Other settings</legend>
+                        <div class="row mb-3 align-self-center" id="otherSettings">
+
                         </div>
                     </fieldset>
                     <button class="btn btn-primary mt-1 ms-1" type="submit" id="subBtn" disabled>Submit</button>
@@ -160,6 +166,64 @@
 </body>
 <script>
     var ipChanged = false;
+
+    function createFormControl(el, name){
+        const bDiv = document.createElement("div");
+        bDiv.setAttribute("class", "row align-items-center");
+        if(typeof(el) === "object"){
+            let lblDiv = document.createElement("div");
+            lblDiv.setAttribute("class", "col-auto");
+            bDiv.appendChild(lblDiv);
+            let chkLabel = document.createElement("label");
+            chkLabel.setAttribute("class", "col-form-label");
+            chkLabel.setAttribute("for", name);
+            chkLabel.append(el["desc"]);
+            lblDiv.appendChild(chkLabel);
+
+            const val = el["val"];
+            if(typeof(val) === "number"){
+                let min = el["min"];
+                let max = el["max"];
+                let numDiv = document.createElement("div");
+                numDiv.setAttribute("class", "col-auto align-self-end");
+                bDiv.appendChild(numDiv);
+
+                let numCtrl = document.createElement("input");
+                numCtrl.setAttribute("id", name);
+                numCtrl.setAttribute("min", min);
+                numCtrl.setAttribute("max", max);
+                numCtrl.value = val;
+                numDiv.appendChild(numCtrl);
+
+                if((typeof(min) != "undefined") && (typeof(max) != "undefined")){
+                    var valOutput = document.createElement("output");
+                    valOutput.setAttribute("class", "col-auto");
+                    bDiv.appendChild(valOutput);
+                    valOutput.value = val;
+                    numCtrl.setAttribute("class", "form-range");
+                    numCtrl.setAttribute("type", "range");
+                    numCtrl.addEventListener("input", (event) => {
+                        valOutput.value = event.target.value;
+                    });
+                }else{
+                    numCtrl.setAttribute("class", "form-control");
+                    numCtrl.setAttribute("type", "number");
+                }
+            }else if(typeof(val) === "boolean"){
+                let chkDiv = document.createElement("div");
+                chkDiv.setAttribute("class", "col-auto");
+                bDiv.appendChild(chkDiv);
+                let chkBox = document.createElement("input");
+                chkBox.setAttribute("class", "form-check-input");
+                chkBox.setAttribute("type", "checkbox");
+                chkBox.setAttribute("id", name);
+                chkBox.checked = el["val"];
+                chkDiv.appendChild(chkBox);
+            }
+        }
+
+        return bDiv;
+    }
 
     function loadConfiguration(){
         fetch('/api/config')
@@ -203,6 +267,15 @@
                 if(document.getElementById("staIP").value === "0.0.0.0"){
                     document.getElementById("useDHCP").checked = true;
                 }
+
+                const otherCfgDiv = document.getElementById("otherSettings");
+                for(cfgData in data){
+                    const ctrl = createFormControl(data[cfgData], cfgData);
+                    if(ctrl){
+                        otherCfgDiv.appendChild(ctrl);
+                    }
+                }
+
                 toggleDHCP();
                 updateGain();
             })

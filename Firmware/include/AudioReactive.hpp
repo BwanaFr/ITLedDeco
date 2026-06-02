@@ -145,7 +145,7 @@ public:
      */
     bool process(const AudioInput::audio_sample_t* samples, size_t nbSamples, const AudioReactiveData* data);
 
-    void getConfiguration(JsonObject& obj) const override;
+    void getConfiguration(JsonObject& obj, bool full=true, bool withSecrets=true) const override;
     CFG_RESULT setConfiguration(JsonObjectConst obj) override;
 
 
@@ -189,7 +189,7 @@ public:
     const AudioReactiveData* getData();
 
 
-    void getConfiguration(JsonObject& obj) const override;
+    void getConfiguration(JsonObject& obj, bool full=true, bool withSecrets=true) const override;
     CFG_RESULT setConfiguration(JsonObjectConst obj) override;
 
 private:
