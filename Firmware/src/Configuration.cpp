@@ -443,9 +443,9 @@ void DeviceConfiguration::write()
     toJSON(obj, false, true);
     serializeJson(obj, cfgFile);
     cfgFile.close();
-    std::string str;
-    serializeJson(obj, str);
-    ESP_LOGI(TAG, "%s", str.c_str());
+    // std::string str;
+    // serializeJson(obj, str);
+    // ESP_LOGI(TAG, "%s", str.c_str());
 }
 
 void DeviceConfiguration::generateKeys(unsigned char iv[16], unsigned char key[128])

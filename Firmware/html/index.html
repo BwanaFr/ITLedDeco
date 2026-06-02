@@ -31,6 +31,10 @@
     <div class="col"><div class="text-end fs-3">Audio gain </div></div>
     <div class="col"><h2><span class="badge text-start text-bg-light" id="audioGain">--</span></h2></div>
   </div>
+  <div class="row align-items-center">
+    <div class="col"><div class="text-end fs-3">Audio level </div></div>
+    <div class="col"><h2><span class="badge text-start text-bg-light" id="audioLevel">--</span></h2></div>
+  </div>
 </div>
 <div class="container-fluid fixed-bottom text-center pb-1 bg-light">
     <div class="row">
@@ -101,7 +105,17 @@ function fetchInfo(){
             document.getElementById("nextFXTime").innerHTML = Number.parseFloat((nextTime/1000.0)).toFixed(0) + " s";
         }
         document.getElementById("currFXTime").innerHTML = Number.parseFloat((json["dispTime"]/1000.0)).toFixed(0) + " s";
-        document.getElementById("audioGain").innerHTML = json["audioGain"];
+        let gain = json["audioGain"]
+        if(typeof(gain) === "null"){
+            gain = "---";
+        }
+        document.getElementById("audioGain").innerHTML = gain;
+
+        let level = json["audioMean"]
+        if(typeof(level) === "null"){
+            level = "---";
+        }
+        document.getElementById("audioLevel").innerHTML = level;
     };
     req.onerror = function(e) {
         document.getElementById("currentFX").classList.remove('text-bg-light');

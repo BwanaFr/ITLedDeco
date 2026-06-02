@@ -85,6 +85,16 @@ public:
         return o;
     }
 
+    /**
+     * Creates a slider with step
+     */
+    template<typename T>
+    static JsonObject createSetting(JsonObject& obj, bool full, const char* name, const char* desc, T val, T min, T max, T step){
+        JsonObject o = createSetting<T>(obj, full, name, desc, val, min, max);
+        o["step"] = step;
+        return o;
+    }
+
     template<typename T>
     static CFG_RESULT setValueIfSet(JsonObjectConst obj, const char* name, T& val){
         if(obj[name].is<T>()){

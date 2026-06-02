@@ -22,7 +22,7 @@
 #define API_URI "/api/"
 
 extern LedFXManager fxManager;
-
+extern AudioInput* audioInput;
 
 #define FW_HEADER_LEN 8
 static const char FW_HEADER[FW_HEADER_LEN] = "LED-FW";
@@ -368,7 +368,7 @@ esp_err_t Webserver::cfg_post_handler( httpd_req_t *req )
         * ensure that the underlying socket is closed */
         return ESP_FAIL;
     }
-    ESP_LOGI(TAG, "JSON (%u) : %s", dataSize, content.c_str());
+    // ESP_LOGI(TAG, "JSON (%u) : %s", dataSize, content.c_str());
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, content);
     if(error){
@@ -517,6 +517,10 @@ esp_err_t Webserver::status_get_handler(httpd_req_t *req )
         doc["dispTime"] = dispTime;
         if(fxManager.isAutoChange()){
             doc["nextTime"] = nextTime;
+        }
+        if(audioInput){
+            doc["audioGain"] = audioInput->getGain();
+            doc["audioMean"] = audioInput->getMeanValue();
         }
     }
 

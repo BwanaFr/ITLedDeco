@@ -230,10 +230,10 @@ float BeatDetector::getSpectralFlux(float startFreq, float endFreq, const AudioR
 
 void BeatDetector::getConfiguration(JsonObject& obj, bool full, bool withSecrets) const
 {
-    createSetting(obj, full, "bd_startFreq", "Beat detect. start frequency [Hz]", startFreq_, 0.0f, 10000.0f);
-    createSetting(obj, full, "bd_endFreq", "Beat detect. end frequency [Hz]", endFreq_, 0.0f, 10000.0f);
-    createSetting(obj, full, "bd_threshold", "Beat detect. threshold", threshold_, 0.0f, 100.0f);
-    createSetting(obj, full, "bd_sensitivity", "Beat detect. sensitivity", sensitivity_, 0.0f, 50.0f);
+    createSetting(obj, full, "bd_startFreq", "Beat detect. start frequency [Hz]", startFreq_, 0.0f, 2000.0f);
+    createSetting(obj, full, "bd_endFreq", "Beat detect. end frequency [Hz]", endFreq_, 100.0f, 10000.0f);
+    createSetting(obj, full, "bd_threshold", "Beat detect. threshold", threshold_, 0.0f, 100.0f, 0.1f);
+    createSetting(obj, full, "bd_sensitivity", "Beat detect. sensitivity", sensitivity_, 0.0f, 20.0f, 0.1f);
 }
 
 Configurable::CFG_RESULT BeatDetector::setConfiguration(JsonObjectConst obj)

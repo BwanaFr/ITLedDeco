@@ -47,6 +47,8 @@ public:
      * @return signal gain
      */
     inline float getGain() const { return gain_; }
+
+    inline audio_sample_t getMeanValue(){ return meanValue_; }
 protected:
     /**
      * Reads audio samples from hardware
@@ -56,5 +58,6 @@ protected:
     virtual audio_sample_t* readSamples(std::size_t& size) = 0;
 private:
     uint32_t sampleRate_;
+    audio_sample_t meanValue_;
     float gain_;
 };

@@ -184,6 +184,7 @@
             if(typeof(val) === "number"){
                 let min = el["min"];
                 let max = el["max"];
+                let step = el["step"];
                 let numDiv = document.createElement("div");
                 numDiv.setAttribute("class", "col-auto align-self-end");
                 bDiv.appendChild(numDiv);
@@ -192,6 +193,7 @@
                 numCtrl.setAttribute("id", name);
                 numCtrl.setAttribute("min", min);
                 numCtrl.setAttribute("max", max);
+                numCtrl.setAttribute("step", step);
                 numCtrl.value = val;
                 numDiv.appendChild(numCtrl);
 
