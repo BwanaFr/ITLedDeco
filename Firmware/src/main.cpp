@@ -139,6 +139,9 @@ void configureAudioInput(){
         }
         currentAudioInput = input;
     }
+    if(audioInput){
+        audioInput->setGain(audioGain);
+    }
 }
 
 void configurationChanged(DeviceConfiguration::Parameter param)

@@ -35,6 +35,14 @@
     <div class="col"><div class="text-end fs-3">Audio level </div></div>
     <div class="col"><h2><span class="badge text-start text-bg-light" id="audioLevel">--</span></h2></div>
   </div>
+  <div class="row align-items-center">
+    <div class="col"><div class="text-end fs-3">Beat detection maximum flux </div></div>
+    <div class="col"><h2><span class="badge text-start text-bg-light" id="bd_maxVal">--</span></h2></div>
+  </div>
+  <div class="row align-items-center">
+    <div class="col"><div class="text-end fs-3">Beat detection maximum change </div></div>
+    <div class="col"><h2><span class="badge text-start text-bg-light" id="bd_maxChange">--</span></h2></div>
+  </div>
 </div>
 <div class="container-fluid fixed-bottom text-center pb-1 bg-light">
     <div class="row">
@@ -92,6 +100,10 @@ function nextFx(){
     req.send();
 }
 
+function setLabel(target, value){
+    document.getElementById(target).innerHTML = (typeof(value) === "null") ? "---" : value;
+}
+
 function fetchInfo(){
     const req = new XMLHttpRequest();
     req.open("GET",'/api/status',true);
@@ -105,17 +117,11 @@ function fetchInfo(){
             document.getElementById("nextFXTime").innerHTML = Number.parseFloat((nextTime/1000.0)).toFixed(0) + " s";
         }
         document.getElementById("currFXTime").innerHTML = Number.parseFloat((json["dispTime"]/1000.0)).toFixed(0) + " s";
-        let gain = json["audioGain"]
-        if(typeof(gain) === "null"){
-            gain = "---";
-        }
-        document.getElementById("audioGain").innerHTML = gain;
 
-        let level = json["audioMean"]
-        if(typeof(level) === "null"){
-            level = "---";
-        }
-        document.getElementById("audioLevel").innerHTML = level;
+        setLabel("audioGain", json["audioGain"]);
+        setLabel("audioLevel", json["audioMean"]);
+        setLabel("bd_maxVal", json["bd_maxVal"]);
+        setLabel("bd_maxChange", json["bd_maxChange"]);
     };
     req.onerror = function(e) {
         document.getElementById("currentFX").classList.remove('text-bg-light');

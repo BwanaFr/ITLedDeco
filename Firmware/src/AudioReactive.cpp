@@ -85,9 +85,18 @@ const AudioReactiveData* AudioReactive::getData()
     return ret;
 }
 
+void AudioReactive::getStats(JsonObject& obj)
+{
+    obj["bd_maxVal"] = beatDetector_.getMaxValueHistory();
+    obj["bd_maxChange"] = beatDetector_.getMaxChangeHistory();
+}
+
 void AudioReactive::getConfiguration(JsonObject& obj, bool full, bool withSecrets) const
 {
     beatDetector_.getConfiguration(obj, full, withSecrets);
+    float fftBins = results_[0].fftHzPerBin;
+    obj["bd_startFreq"]["step"] = fftBins;
+    obj["bd_endFreq"]["step"] = fftBins;
 }
 
 Configurable::CFG_RESULT AudioReactive::setConfiguration(JsonObjectConst obj)
@@ -136,17 +145,20 @@ bool BeatDetector::process(const AudioInput::audio_sample_t* samples, size_t nbS
 {
     //Only use bass bins
     float value = getSpectralFlux(startFreq_, endFreq_, data);
-    float prevMean = lastValues_;
+    float prevMean = lastValues_.getMean();
     bool ret = false;
     if(prevMean > 0.0f){
         float diff = (value/prevMean);
         ret = ((value > threshold_) && (diff>=sensitivity_) && (lastValues_.getLatest() < threshold_));
         // ESP_LOGI(TAG, "%c %f Mean : %f \t\t Last: %f", (ret ? '+' : '-'), value, prevMean, lastValues_.getLatest());
+        last50Diff_.add(diff);
     }else{
         ret = (value > (1.5f * threshold_));
     }
 
     lastValues_.add(value);
+    last50Values_.add(value);
+
     unsigned long now = ::millis();
     if(ret){
         //250ms between each beat give use a 240 BPM max :)
@@ -212,7 +224,6 @@ float BeatDetector::getSpectralFlux(float startFreq, float endFreq, const AudioR
 
     int startFreqBin = startFreq/data->fftHzPerBin;
     int endFreqBin = (endFreq/data->fftHzPerBin)+1;
-
     for (std::size_t i = startFreqBin; i < endFreqBin; i++) {
         float diff = data->fftData[i] - prevFFT_[i];
         if (diff > 0.0f) {

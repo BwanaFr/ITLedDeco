@@ -23,6 +23,7 @@
 
 extern LedFXManager fxManager;
 extern AudioInput* audioInput;
+extern AudioReactive audioReactive;
 
 #define FW_HEADER_LEN 8
 static const char FW_HEADER[FW_HEADER_LEN] = "LED-FW";
@@ -510,23 +511,27 @@ esp_err_t Webserver::status_get_handler(httpd_req_t *req )
     httpd_resp_set_type(req, "application/json");
     //Build a JSON with status info
     JsonDocument doc;
+    JsonObject obj = doc.to<JsonObject>();
     unsigned long dispTime, nextTime;
     std::string fxName;
     if(fxManager.getFXInfos(fxName, nextTime, dispTime)){
-        doc["FXName"] = fxName;
-        doc["dispTime"] = dispTime;
+        obj["FXName"] = fxName;
+        obj["dispTime"] = dispTime;
         if(fxManager.isAutoChange()){
-            doc["nextTime"] = nextTime;
-        }
-        if(audioInput){
-            doc["audioGain"] = audioInput->getGain();
-            doc["audioMean"] = audioInput->getMeanValue();
+            obj["nextTime"] = nextTime;
         }
     }
 
+    if(audioInput){
+        obj["audioGain"] = audioInput->getGain();
+        obj["audioMean"] = audioInput->getMeanValue();
+    }
+
+    audioReactive.getStats(obj);
+
     //Serialize to string
     std::string jsonStr;
-    serializeJson(doc, jsonStr);
+    serializeJson(obj, jsonStr);
     httpd_resp_send( req, jsonStr.c_str(), jsonStr.length());
     return ESP_OK;
 }

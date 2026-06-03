@@ -42,19 +42,15 @@ struct AudioReactiveData
 };
 
 template <typename T, std::size_t N>
-class MovingAverage{
+class MovingStats{
 public:
-    MovingAverage() : count_{0}, index_{0}
+    MovingStats() : count_{0}, index_{0}
     {
     };
 
-    ~MovingAverage() = default;
+    ~MovingStats() = default;
 
-    operator T(){
-        return get();
-    }
-
-    T get(){
+    T getMean() const {
         T ret = T();
         for(std::size_t i=0;i<count_;++i){
             ret += buffer_[i];
@@ -72,13 +68,39 @@ public:
         buffer_[index_++] = val;
     }
 
-    std::size_t size(){
+    std::size_t size() const {
         return count_;
     }
 
-    T getLatest(){
+    T getLatest() const {
         std::size_t index = index_ == 0 ? N-1 : index_-1;
         return buffer_[index];
+    }
+
+    T getMin() const {
+        T ret = T();
+        if(count_>0){
+            ret = buffer_[0];
+        }
+        for(std::size_t i=1;i<count_;++i){
+            if(buffer_[i] < ret){
+                ret = buffer_[i];
+            }
+        }
+        return ret;
+    }
+
+    T getMax() const {
+        T ret = T();
+        if(count_>0){
+            ret = buffer_[0];
+        }
+        for(std::size_t i=1;i<count_;++i){
+            if(buffer_[i] > ret){
+                ret = buffer_[i];
+            }
+        }
+        return ret;
     }
 
 private:
@@ -148,6 +170,17 @@ public:
     void getConfiguration(JsonObject& obj, bool full=true, bool withSecrets=true) const override;
     CFG_RESULT setConfiguration(JsonObjectConst obj) override;
 
+    /**
+     * Gets the maximum flux over last 50 computations
+     * @return the maximum flux over last 50 computations
+     */
+    inline AudioInput::audio_sample_t getMaxValueHistory() const { return last50Values_.getMax(); };
+
+    /**
+     * Gets the maximum difference over last 50 computations
+     * @return the maximum difference over last 50 computations
+     */
+    inline AudioInput::audio_sample_t getMaxChangeHistory() const { return last50Diff_.getMax(); };
 
 private:
     unsigned long lastBeat_;                                    //!< Last beat detection timestamp
@@ -156,10 +189,12 @@ private:
     float threshold_;                                           //!< Flux threshold
     float sensitivity_;                                         //!< Flux sensitivity
 #if defined(USE_BASS)
-    MovingAverage<AudioInput::audio_sample_t, 10> lastValues_;   //!< Last values
+    MovingStats<AudioInput::audio_sample_t, 10> lastValues_;    //!< Last values
 #else
-    MovingAverage<AudioInput::audio_sample_t, 1> lastValues_;   //!< Last values
+    MovingStats<AudioInput::audio_sample_t, 1> lastValues_;     //!< Last values
 #endif
+    MovingStats<AudioInput::audio_sample_t, 50> last50Values_;  //!< Last 50 values
+    MovingStats<AudioInput::audio_sample_t, 50> last50Diff_;    //!< Last 50 diffs
     std::deque<float> prevFFT_;                                 //!< Previous FFT bins
     /**
      * Computes spectral flux
@@ -188,6 +223,10 @@ public:
      */
     const AudioReactiveData* getData();
 
+    /**
+     * Gets audio reactive statistics
+     */
+    void getStats(JsonObject& obj);
 
     void getConfiguration(JsonObject& obj, bool full=true, bool withSecrets=true) const override;
     CFG_RESULT setConfiguration(JsonObjectConst obj) override;

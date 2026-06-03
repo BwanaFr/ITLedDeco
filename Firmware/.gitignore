@@ -4,3 +4,4 @@
 .vscode/launch.json
 .vscode/ipch
 fastled_js
+src/GitVersion.cpp
