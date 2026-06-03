@@ -280,6 +280,7 @@
 
                 toggleDHCP();
                 updateGain();
+                document.getElementById('subBtn').focus({ preventScroll: true });
             })
             .catch((error) => {
                 console.error('Fetch error:', error);
