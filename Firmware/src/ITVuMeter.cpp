@@ -2,9 +2,12 @@
 #include "ITVuMeter.hpp"
 #include "ITLedMap.hpp"
 #include <Arduino.h>
+#include <esp_log.h>
 #include <sstream>
 
 #define BLUR_AMOUNT 2
+
+static const char* TAG = "ITVuMeter";
 
 ITVuMeter::ITVuMeter(const fl::XYMap &xymap) :
         fl::Fx2d(xymap),
@@ -63,15 +66,15 @@ void ITVuMeter::setRandomPalette()
         for(int i=0;i<palettes_.size(); ++i){
             if(palettes_[i].enabled){
                 currentPalette_ = i;
-                return;
+                break;
             }
         }
     }else if(enabledCount > 1){
         while(true){
-            fl::u16 idx = random16(idx) % MAX_PALETTE;
+            fl::u16 idx = random16(MAX_PALETTE);
             if(palettes_[idx].enabled && (idx != currentPalette_)){
                 currentPalette_ = idx;
-                return;
+                break;
             }
         }
     }
@@ -118,16 +121,16 @@ bool ITVuMeter::setCustomConfiguration(JsonObjectConst obj)
 
 void ITVuMeter::beforeDraw()
 {
-    // if((fl::millis() - lastPaletteChange_) >= paletteChangeRate_){
-    //     setRandomPalette();
-    //     lastPaletteChange_ = fl::millis();
-    // }
+    if((fl::millis() - lastPaletteChange_) >= paletteChangeRate_){
+        setRandomPalette();
+        lastPaletteChange_ = fl::millis();
+    }
 }
 
 void ITVuMeter::audioReactive(const AudioReactiveData* reactive)
 {
-    //TODO: Update this with FFT
-    float be = 0.0f; //reactive.getBassEnergy();
+    //TODO: Update this with FFT?
+    float be = reactive->signalRMS;
     //Gets max over buffer
     if(be > energyMax_[energyCell_]){
         energyMax_[energyCell_] = be;

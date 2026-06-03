@@ -49,17 +49,17 @@ using namespace fl;
 
 #define BTN_PIN 38              // Onboard button
 #define LED_PIN 34              // Onboard led
-
+#define LED_PIN_INVERTED true
 // I2S pins for INMP441 microphone (adjust for your board)
 #define MIC_I2S_WS_PIN GPIO_NUM_37          // Word Select (LRCLK)
 #define MIC_I2S_SD_PIN GPIO_NUM_35          // Serial Data (DIN)
 #define MIC_I2S_CLK_PIN GPIO_NUM_36         // Serial Clock (BCLK)
 
 //External ADC
-#define EXT_I2S_BCLK_PIN GPIO_NUM_6         // Serial Clock (BCLK)
-#define EXT_I2S_WS_PIN GPIO_NUM_4           // Word Select (LRCLK)
-#define EXT_I2S_SD_PIN GPIO_NUM_5           // Serial Data (DIN)
-#define EXT_I2S_MCLK_PIN GPIO_NUM_NC        // Masterc lock (MCLK)
+// #define EXT_I2S_BCLK_PIN GPIO_NUM_6         // Serial Clock (BCLK)
+// #define EXT_I2S_WS_PIN GPIO_NUM_4           // Word Select (LRCLK)
+// #define EXT_I2S_SD_PIN GPIO_NUM_5           // Serial Data (DIN)
+// #define EXT_I2S_MCLK_PIN GPIO_NUM_NC        // Masterc lock (MCLK)
 
 #elif defined(T7_S3)
 #define DATA_PIN_I 10           // I Led data pin
@@ -68,10 +68,10 @@ using namespace fl;
 #define BTN_PIN 0               // Onboard button
 #define LED_PIN 17              // Onboard led
 
-// I2S pins for INMP441 microphone (adjust for your board)
-#define MIC_I2S_WS_PIN GPIO_NUM_37  // Word Select (LRCLK)
-#define MIC_I2S_SD_PIN GPIO_NUM_35  // Serial Data (DIN)
-#define MIC_I2S_CLK_PIN GPIO_NUM_36 // Serial Clock (BCLK)
+// // I2S pins for INMP441 microphone (adjust for your board)
+// #define MIC_I2S_WS_PIN GPIO_NUM_37  // Word Select (LRCLK)
+// #define MIC_I2S_SD_PIN GPIO_NUM_35  // Serial Data (DIN)
+// #define MIC_I2S_CLK_PIN GPIO_NUM_36 // Serial Clock (BCLK)
 
 //External ADC
 #define EXT_I2S_BCLK_PIN GPIO_NUM_5     // Serial Clock (BCLK)
@@ -130,7 +130,14 @@ void configureAudioInput(){
         // Initialize I2S Audio
         if(input == 1){
             //PCM1808 input
+#ifdef EXT_I2S_BCLK_PIN
             audioInput = new I2SAudioInput(22050, 512, EXT_I2S_BCLK_PIN, EXT_I2S_WS_PIN, EXT_I2S_SD_PIN, EXT_I2S_MCLK_PIN);
+#endif
+        }else if(input == 0){
+            //Mic input
+#ifdef MIC_I2S_WS_PIN
+            audioInput = new I2SAudioInput(22050, 512, MIC_I2S_CLK_PIN, MIC_I2S_WS_PIN, MIC_I2S_SD_PIN);
+#endif
         }
 
         // Start audio capture
@@ -170,7 +177,18 @@ void audioReactiveTask(void* param){
             if(data){
                 // ESP_LOGI("Audio", "RMS: %f", data->signalRMS);
 #ifdef LED_PIN
+#ifdef LED_PIN_INVERTED
+                ::digitalWrite(LED_PIN, !data->beatDetected);
+#else
                 ::digitalWrite(LED_PIN, data->beatDetected);
+#endif
+#endif
+#ifdef DATA_PIN_ONBOARD
+                if(data->beatDetected){
+                    onBoardLed = CRGB::White;
+                }else{
+                    onBoardLed.fadeToBlackBy(80);
+                }
 #endif
             }
         }else{
@@ -249,7 +267,7 @@ void setup()
     //Internal led to show beat detection
     FastLED.addLeds<SK6812, DATA_PIN_ONBOARD, GRB>(&onBoardLed, 1);
 #endif
-    FastLED.setBrightness(64);
+    // FastLED.setBrightness(64);
 
     fxManager.registerFx(&noisePalette);
     fxManager.registerFx(&particles);

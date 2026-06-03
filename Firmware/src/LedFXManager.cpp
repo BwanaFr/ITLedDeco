@@ -17,25 +17,30 @@ LedFXManager::~LedFXManager()
 
 void LedFXManager::draw(fl::span<CRGB> outputBuffer, const AudioReactiveData* audioreactive)
 {
-    int currId = fxEngine_.getCurrentFxId();
-    LedFX* currLedFX = fxMap_[currId];
-    if(audioreactive){
-        currLedFX->audioReactive(audioreactive);
-        //Feed audio for requesting FX
-        for(FXMap::iterator it=fxMap_.begin();it!=fxMap_.end();++it){
-            if(it->second != currLedFX){
-                if(it->second->needAudio()){
-                    it->second->audioReactive(audioreactive);
+    if(fxEnabled_){
+        int currId = fxEngine_.getCurrentFxId();
+        LedFX* currLedFX = fxMap_[currId];
+        if(audioreactive){
+            currLedFX->audioReactive(audioreactive);
+            //Feed audio for requesting FX
+            for(FXMap::iterator it=fxMap_.begin();it!=fxMap_.end();++it){
+                if(it->second != currLedFX){
+                    if(it->second->needAudio()){
+                        it->second->audioReactive(audioreactive);
+                    }
                 }
             }
         }
-    }
-    currLedFX->beforeDraw();
+        currLedFX->beforeDraw();
 
-    fxEngine_.draw(fl::millis(), outputBuffer);
-
-    //Maybe it's time to switch
-    if(autoChange_ && (millis() >= (lastChange_ + currLedFX->getDisplayPeriod()))){
+        fxEngine_.draw(fl::millis(), outputBuffer);
+        //Maybe it's time to switch
+        if(autoChange_ && (millis() >= (lastChange_ + currLedFX->getDisplayPeriod()))){
+            nextFX();
+        }
+    }else{
+        // No FX selected, output black
+        fill_solid(outputBuffer, fl::CRGB::Black);
         nextFX();
     }
 }
@@ -59,7 +64,15 @@ void LedFXManager::registerFx(LedFX* fx)
 
 void LedFXManager::nextFX()
 {
-    if(fxMap_.size() > 1){
+    bool lastFxEnabled = fxEnabled_;
+    fxEnabled_ = false;
+    for(std::pair<int, LedFX*> fx : fxMap_){
+        if(fx.second->isEnabled()){
+            fxEnabled_ = true;
+            break;
+        }
+    }
+    if(fxEnabled_){
         int curId = fxEngine_.getCurrentFxId();
         while(true){
             ++curId;
@@ -80,6 +93,11 @@ void LedFXManager::nextFX()
                 break;
             }
         }
+    }else{
+        ESP_LOGI(TAG, "No FX enabled");
+    }
+    if(fxEnabled_ != lastFxEnabled){
+        lastChange_  = 0;
     }
 }
 

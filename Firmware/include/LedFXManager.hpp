@@ -64,4 +64,5 @@ private:
     FXMap fxMap_;
     unsigned long lastChange_;
     bool autoChange_;
+    bool fxEnabled_;
 };
