@@ -122,14 +122,16 @@ function fetchInfo(){
         setLabel("audioLevel", json["audioMean"]);
         setLabel("bd_maxVal", json["bd_maxVal"]);
         setLabel("bd_maxChange", json["bd_maxChange"]);
+        setTimeout(fetchInfo, 1000);
     };
     req.onerror = function(e) {
         document.getElementById("currentFX").classList.remove('text-bg-light');
         document.getElementById("currentFX").classList.add('text-bg-danger');
         document.getElementById("currentFX").innerHTML = "Offline (network error)";
+        setTimeout(fetchInfo, 2000);
     };
     req.send();
-    setTimeout(fetchInfo, 1000);
+
 };
 fetchInfo();
 

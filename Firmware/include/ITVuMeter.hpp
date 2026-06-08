@@ -21,7 +21,7 @@ public:
     void beforeDraw() override;
     bool needAudio() override;
 private:
-    fl::u16 rate_;                          //!<< Sparks generation rate [ms]
+    fl::u32 rate_;                          //!<< Sparks generation rate [ms]
     fl::u32 lastGen_;                       //!<< Last time FX was generated
     fl::u32 paletteChangeRate_;             //!<< Random palette change
     fl::u32 lastPaletteChange_;             //!<< Last random palette change

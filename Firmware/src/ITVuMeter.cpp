@@ -29,26 +29,24 @@ ITVuMeter::ITVuMeter(const fl::XYMap &xymap) :
 
 void ITVuMeter::draw(fl::Fx::DrawContext context)
 {
+    static float levelTest = 0.0f;
     fadeToBlackBy(context.leds, fadeRate_);
     if((context.now - lastGen_) >= rate_){
         lastGen_ = context.now;
         int middle = getHeight()/2;
-        int count = getHeight() - middle;
-        int stopTop = fl::map_range_clamped<float, int>(level_, 0.0f, levelGain_, middle, getHeight());
-        int stopBot = middle - fl::map_range_clamped<float, int>(level_, 0.0f, levelGain_, 0, middle);
-        const TProgmemRGBPalette16* pal = palettes_[currentPalette_].palette;
-        for(int y=middle;y<stopTop;++y){
-            CRGB color = ColorFromPalette(*pal, map(y, middle, getHeight(), 0, 255));
-            for(int x=0;x<getWidth();++x){
-                fl::u16 index = getXYMap()(x,y);
-                context.leds[index] = color;
-            }
-        }
-        for(int y=middle-1;y>=stopBot;--y){
-            CRGB color = ColorFromPalette(*pal, map(middle-y, 0, middle+1, 0, 255));
-            for(int x=0;x<getWidth();++x){
-                fl::u16 index = getXYMap()(x,y);
-                context.leds[index] = color;
+        int stop = fl::map_range_clamped<float, int>(level_, 0.0f, levelGain_, 0, middle);
+        int max = middle + stop;
+        int min = middle - stop;
+        if(stop>0){
+            const TProgmemRGBPalette16* pal = palettes_[currentPalette_].palette;
+            for(int i=0;i<(stop+1);++i){
+                CRGB color = ColorFromPalette(*pal, map(i, 0, middle, 0, 255));
+                int indexTop = middle + i;
+                int indexBot = middle - i;
+                for(int x=0;x<getWidth();++x){
+                    context.leds[getXYMap()(x,indexTop)] = color;
+                    context.leds[getXYMap()(x,indexBot)] = color;
+                }
             }
         }
     }
@@ -87,7 +85,7 @@ void ITVuMeter::setPalette(int index)
 
 void ITVuMeter::getCustomConfiguration(JsonObject& obj) const
 {
-    createSetting<fl::u16>(obj, "rate", "Display rate [ms]", rate_);
+    createSetting<fl::u32>(obj, "rate", "Display rate [ms]", rate_);
     createSetting<fl::u32>(obj, "palRate", "Palette change rate [ms]", paletteChangeRate_);
     createSetting<fl::u8>(obj, "fadeRate", "Fade rate", fadeRate_, 0, 255);
     createSetting<float>(obj, "levelGain", "Level gain", levelGain_, 0, 200.0f);
@@ -102,7 +100,7 @@ void ITVuMeter::getCustomConfiguration(JsonObject& obj) const
 
 bool ITVuMeter::setCustomConfiguration(JsonObjectConst obj)
 {
-    setValueIfSet<fl::u16>(obj, "rate", rate_);
+    setValueIfSet<fl::u32>(obj, "rate", rate_);
     setValueIfSet<fl::u8>(obj, "fadeRate", fadeRate_);
     setValueIfSet<fl::u32>(obj, "palRate", paletteChangeRate_);
     setValueIfSet<float>(obj, "levelGain", levelGain_);
