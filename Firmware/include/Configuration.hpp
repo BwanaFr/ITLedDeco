@@ -126,10 +126,11 @@ public:
      * Enumeration of parameter
      */
     enum class Parameter {
-        AP_SSID = 0,   //WiFi AP mode configuration
-        STA_SSID,      //WiFi station configuration
-        STA_IP,        //WiFi station IP parameters
-        AUDIO,         //Audio configuration
+        AP_SSID = 0,        //WiFi AP mode configuration
+        STA_SSID,           //WiFi station configuration
+        STA_IP,             //WiFi station IP parameters
+        AUDIO,              //Audio configuration
+        LED_BRIGHTNESS,     //Global brightness
 //TODO: Implement more ?
     };
 
@@ -214,6 +215,20 @@ public:
     void getAudioConfiguration(int& source, float& gain);
 
     /**
+     * Sets global LED brightness
+     * @param brightness Brightness to be applied (0 - 255)
+     * @param forceNotification True to notifiy new configuration (even if not changed)
+     * @return true if changed
+     */
+    bool setLEDBrightness(uint8_t brightness, bool forceNotification = false);
+
+    /**
+     * Gets LED global brightness
+     * @return brightness value (0 - 255)
+     */
+    uint8_t getLEDBrightness();
+
+    /**
      * Create a JSON string of the configuration
      */
     void toJSONString(std::string& str, bool full = true);
@@ -263,6 +278,7 @@ private:
     IPAddress staGateway_;                      //!< Next gateway if static IP
     float audioGain_;                           //!< Audio manual gain value
     int audioInput_;                            //!< Audio input
+    uint8_t ledBrightness_;                     //!< Global LED brightness
     std::vector<ParameterListener> listeners_;  //!< Configuration listeners
     TaskHandle_t configTask_;                   //!<< Handle to the task
 

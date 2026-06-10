@@ -155,6 +155,8 @@ void configurationChanged(DeviceConfiguration::Parameter param)
 {
     if(param == DeviceConfiguration::Parameter::AUDIO){
         audioConfigChanged = true;
+    }else if(param == DeviceConfiguration::Parameter::LED_BRIGHTNESS){
+        FastLED.setBrightness(configuration.getLEDBrightness());
     }
 }
 
@@ -267,7 +269,7 @@ void setup()
     //Internal led to show beat detection
     FastLED.addLeds<SK6812, DATA_PIN_ONBOARD, GRB>(&onBoardLed, 1);
 #endif
-    // FastLED.setBrightness(64);
+    FastLED.setBrightness(configuration.getLEDBrightness());
 
     fxManager.registerFx(&noisePalette);
     fxManager.registerFx(&particles);

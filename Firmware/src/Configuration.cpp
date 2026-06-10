@@ -55,6 +55,7 @@ DeviceConfiguration::DeviceConfiguration() :
         staIP_{DEFAULT_STA_IP}, staSubnet_{DEFAULT_STA_SUBNET},
         staGateway_{DEFAULT_STA_GATEWAY},
         audioGain_{1.0f}, audioInput_{1},
+        ledBrightness_{255},
         configTask_(nullptr)
 {
     mutexData_ = xSemaphoreCreateMutex();
@@ -182,8 +183,15 @@ void DeviceConfiguration::fromJSON(const JsonDocument& doc, bool& changed, bool&
         if(doc["audioSource"].is<int>()){
             inp = doc["audioSource"].as<int>();
         }
-        changed |= setAudioConfiguration(inp, gain);
+        changed |= setAudioConfiguration(inp, gain, forceNotification);
         valid = true;
+    }
+
+    if(doc["ledBrightness"]){
+        if(doc["ledBrightness"].is<uint8_t>()){
+            changed |= setLEDBrightness(doc["ledBrightness"].as<uint8_t>(), forceNotification);
+            valid = true;
+        }
     }
 
     JsonObjectConst obj = doc.as<JsonObjectConst>();
@@ -323,6 +331,36 @@ void DeviceConfiguration::getAudioConfiguration(int& source, float& gain)
     }
 }
 
+bool DeviceConfiguration::setLEDBrightness(uint8_t brightness, bool forceNotification)
+{
+    bool changed = false;
+    if(xSemaphoreTake(mutexData_, portMAX_DELAY ) == pdTRUE)
+    {
+        if(ledBrightness_ != brightness)
+        {
+            ledBrightness_ = brightness;
+            configurationChanged();
+            changed = true;
+        }
+        xSemaphoreGive(mutexData_);
+        if(changed || forceNotification){
+            notifyListeners(Parameter::LED_BRIGHTNESS);
+        }
+    }
+    return changed;
+}
+
+uint8_t DeviceConfiguration::getLEDBrightness()
+{
+    uint8_t ret = 0;
+    if(xSemaphoreTake(mutexData_, portMAX_DELAY ) == pdTRUE)
+    {
+        ret = ledBrightness_;
+        xSemaphoreGive(mutexData_);
+    }
+    return ret;
+}
+
 /**
  * Loop to delay flash writing
  */
@@ -407,6 +445,8 @@ void DeviceConfiguration::toJSON(JsonObject& doc, bool full, bool includeSecrets
 
         doc["inputGain"] = audioGain_;
         doc["audioSource"] = audioInput_;
+
+        doc["ledBrightness"] = ledBrightness_;
 
         audioReactive.getConfiguration(doc, full, includeSecrets);
 
