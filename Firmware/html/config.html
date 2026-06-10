@@ -107,21 +107,22 @@
                     </fieldset>
                     <fieldset>
                         <legend class="mt-2">LED settings</legend>
-                        <div class="row mb-3 align-self-center">
-                            <label for="ledBrightness" class="col-sm-1 col-form-label">LED global brightness (<output id="ledBrightnessVal"></output>)</label>
-                            <div class="col-sm-3 align-self-end">
-                                <input type="range" id="ledBrightness" class="form-range" min="0" max="255" step="1" oninput="updateBrightness();" />
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-sm-auto col-form-label"><label for="ledBrightness">LED global brightness</label></div>
+                            <div class="col-sm-auto align-self-end">
+                                <input type="range" id="ledBrightness" class="form-range" min="0" max="255" step="1" oninput="updateBrightness();" onchange="setTimeout(updateBrightness, 200);" />
                                 <div class="invalid-feedback">
                                     Please provide a valid value.
                                 </div>
                             </div>
+                            <div class="col-sm-auto"><output id="ledBrightnessVal"></output></div>
                         </div>
                     </fieldset>
                     <fieldset>
                         <legend class="mt-2">Audio settings</legend>
                         <div class="row mb-3 align-self-center">
                             <label for="audioSource" class="col-sm-1 col-form-label">Input selection</label>
-                            <div class="col-sm-3">
+                            <div class="col-sm-auto">
                                 <select name="audioSource" id="audioSource">
                                     <option value="0">Microphone</option>
                                     <option value="1">Line-in</option>
@@ -131,14 +132,15 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="row mb-3 align-self-center" id="inputGainDiv">
-                            <label for="inputGain" class="col-sm-1 col-form-label">Input gain (<output id="inputGainVal"></output>)</label>
-                            <div class="col-sm-3 align-self-end">
+                        <div class="row mb-3 align-items-center" id="inputGainDiv">
+                            <label for="inputGain" class="col-sm-auto col-form-label">Input gain</label>
+                            <div class="col-sm-auto align-self-end">
                                 <input type="range" id="inputGain" class="form-range" min="0.1" max="32" step="0.1" oninput="updateGain();" />
                                 <div class="invalid-feedback">
                                     Please provide a valid value.
                                 </div>
                             </div>
+                            <div class="col-sm-auto"><output id="inputGainVal"></output></div>
                         </div>
                     </fieldset>
                     <fieldset>
@@ -184,10 +186,9 @@
         bDiv.setAttribute("class", "row align-items-center");
         if(typeof(el) === "object"){
             let lblDiv = document.createElement("div");
-            lblDiv.setAttribute("class", "col-auto");
+            lblDiv.setAttribute("class", "col-sm-auto col-form-label");
             bDiv.appendChild(lblDiv);
             let chkLabel = document.createElement("label");
-            chkLabel.setAttribute("class", "col-form-label");
             chkLabel.setAttribute("for", name);
             chkLabel.append(el["desc"]);
             lblDiv.appendChild(chkLabel);
@@ -198,7 +199,7 @@
                 let max = el["max"];
                 let step = el["step"];
                 let numDiv = document.createElement("div");
-                numDiv.setAttribute("class", "col-auto align-self-end");
+                numDiv.setAttribute("class", "col-sm-auto align-self-end");
                 bDiv.appendChild(numDiv);
 
                 let numCtrl = document.createElement("input");
@@ -211,7 +212,7 @@
 
                 if((typeof(min) != "undefined") && (typeof(max) != "undefined")){
                     var valOutput = document.createElement("output");
-                    valOutput.setAttribute("class", "col-auto");
+                    valOutput.setAttribute("class", "col-sm-auto");
                     bDiv.appendChild(valOutput);
                     valOutput.value = val;
                     numCtrl.setAttribute("class", "form-range");
@@ -225,7 +226,7 @@
                 }
             }else if(typeof(val) === "boolean"){
                 let chkDiv = document.createElement("div");
-                chkDiv.setAttribute("class", "col-auto");
+                chkDiv.setAttribute("class", "col-sm-auto");
                 bDiv.appendChild(chkDiv);
                 let chkBox = document.createElement("input");
                 chkBox.setAttribute("class", "form-check-input");
@@ -292,6 +293,7 @@
 
                 toggleDHCP();
                 updateGain();
+                document.getElementById('ledBrightnessVal').value = document.getElementById("ledBrightness").value;
                 document.getElementById('subBtn').focus({ preventScroll: true });
             })
             .catch((error) => {
@@ -421,13 +423,15 @@
     function updateGain(){
         document.getElementById('inputGainVal').value = document.getElementById("inputGain").value;
     }
-
+    var lastCall = 0;
     function updateBrightness(){
         document.getElementById('ledBrightnessVal').value = document.getElementById("ledBrightness").value;
-        setTimeout(()=>{
+
+        const now = Date.now();
+        if (now - lastCall >= 200) {
+            lastCall = now;
             var postData = {};
             postData["ledBrightness"] = document.getElementById("ledBrightness").value;
-
             fetch("/api/config", {
                 method: "POST",
                 body: JSON.stringify(postData),
@@ -443,7 +447,7 @@
             .catch((error) => {
                 console.error('Fetch error:', error);
             });
-        }, 200);
+        }
     }
 
     loadConfiguration();
