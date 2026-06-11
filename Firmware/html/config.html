@@ -431,7 +431,7 @@
         if (now - lastCall >= 200) {
             lastCall = now;
             var postData = {};
-            postData["ledBrightness"] = document.getElementById("ledBrightness").value;
+            postData["ledBrightness"] = parseInt(document.getElementById("ledBrightness").value);
             fetch("/api/config", {
                 method: "POST",
                 body: JSON.stringify(postData),

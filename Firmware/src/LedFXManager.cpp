@@ -3,7 +3,7 @@
 #include "esp_log.h"
 #include <Configuration.hpp>
 
-const char* TAG = "LedFXManager";
+static const char* TAG = "LedFXManager";
 
 LedFXManager::LedFXManager(fl::u16 nbLeds) :
         fxEngine_{nbLeds, false}, //Remove the interpolation as it results to crashes...
@@ -18,6 +18,7 @@ LedFXManager::~LedFXManager()
 void LedFXManager::draw(fl::span<CRGB> outputBuffer, const AudioReactiveData* audioreactive)
 {
     if(fxEnabled_){
+
         int currId = fxEngine_.getCurrentFxId();
         LedFX* currLedFX = fxMap_[currId];
         if(audioreactive){
@@ -32,7 +33,6 @@ void LedFXManager::draw(fl::span<CRGB> outputBuffer, const AudioReactiveData* au
             }
         }
         currLedFX->beforeDraw();
-
         fxEngine_.draw(fl::millis(), outputBuffer);
         //Maybe it's time to switch
         if(autoChange_ && (millis() >= (lastChange_ + currLedFX->getDisplayPeriod()))){

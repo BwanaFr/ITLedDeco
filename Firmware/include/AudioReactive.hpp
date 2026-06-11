@@ -25,7 +25,7 @@ struct AudioReactiveData
     float signalRMS;        //!< RMS value of the signal
     float filtered;         //!< Envelope filtered data
     bool beatDetected;      //!< True if beat is detected
-
+    long lastBeat;          //!< Last beat detected time
     AudioReactiveData() : fftData{nullptr}, fftDataSize{0}, fftHzPerBin{0}, signalRMS{0}, filtered{0}, beatDetected{false}
     {
     }

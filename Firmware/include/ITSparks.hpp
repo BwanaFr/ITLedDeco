@@ -15,13 +15,16 @@ public:
 
     virtual void getCustomConfiguration(JsonObject& obj) const override;
     bool setCustomConfiguration(JsonObjectConst obj) override;
+    void audioReactive(const AudioReactiveData* reactive) override;
 private:
 
-    fl::u16 nbSparks_;      //!<< Number of sparks
-    fl::u16 rate_;          //!<< Sparks generation rate [ms]
-    fl::u32 lastGen_;       //!<< Last time sparks was generated
-    fl::u8 randomLight_;    //!<< Random light amount
-    fl::u8 fadeRate_;       //!< Fade rate
-    fl::u8 baseLight_;      //!< Base light
-    fl::u8 blurAmount_;     //!< Blur amount
+    fl::u16 nbSparks_;                  //!<< Number of sparks
+    fl::u16 rate_;                      //!<< Sparks generation rate [ms]
+    fl::u32 lastGen_;                   //!<< Last time sparks was generated
+    fl::u8 randomLight_;                //!<< Random light amount
+    fl::u8 fadeRate_;                   //!< Fade rate
+    fl::u8 baseLight_;                  //!< Base light
+    fl::u8 blurAmount_;                 //!< Blur amount
+    unsigned long lastBeatDetected_;    //!< Beat detected time
+    fl::u8 beatDetectionAdd_;           //!< Beat detection add value
 };

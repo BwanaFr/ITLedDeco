@@ -81,7 +81,7 @@ using namespace fl;
 #endif
 
 //Updates LED at 50Hz
-#define LED_UPDATE_PERIOD_MS 20
+#define LED_UPDATE_PERIOD_MS 1
 
 static const char* TAG = "Main";
 
@@ -98,7 +98,7 @@ CRGB onBoardLed;
 
 //Leds values (+1 to have a default trash LED for mapping)
 //We are (don't know why, to be seen in FastLed code) obliged to allocate the full 2D array
-CRGB leds[SCREEN_WIDTH * SCREEN_HEIGHT + 1];
+CRGB leds[NB_STRIP_LEDS + 1]; //SCREEN_WIDTH * SCREEN_HEIGHT + 1];
 
 XYMap xymap = XYMap::constructWithUserFunction(SCREEN_WIDTH, SCREEN_HEIGHT, IT::itUserMapFunc);
 
@@ -109,7 +109,7 @@ FLNoisePalette noisePalette(xymap);
 ITVuMeter itVuMeter(xymap);
 ITParticles itParticles(NB_STRIP_LEDS, 5);
 //Our FX manager to switch between effects
-LedFXManager fxManager{SCREEN_WIDTH * SCREEN_HEIGHT};
+LedFXManager fxManager{NB_STRIP_LEDS + 1}; //SCREEN_WIDTH * SCREEN_HEIGHT};
 
 void configureAudioInput(){
     int input;
@@ -156,6 +156,7 @@ void configurationChanged(DeviceConfiguration::Parameter param)
     if(param == DeviceConfiguration::Parameter::AUDIO){
         audioConfigChanged = true;
     }else if(param == DeviceConfiguration::Parameter::LED_BRIGHTNESS){
+        ESP_LOGI(TAG, "Setting brightness to %u", configuration.getLEDBrightness());
         FastLED.setBrightness(configuration.getLEDBrightness());
     }
 }
@@ -164,7 +165,6 @@ void configurationChanged(DeviceConfiguration::Parameter param)
  * Audio reactive task
  */
 void audioReactiveTask(void* param){
-    delay(5000);
     //Enable audio
     configureAudioInput();
     while(true){
@@ -210,10 +210,11 @@ void fastLedTask(void* param){
     bool lastBtn = true;
     bool btnUsed = false;
 
-    unsigned long lastSample = ::micros();
+    unsigned long lastSample = ::millis();
 
     const TickType_t updateRateMs = LED_UPDATE_PERIOD_MS/portTICK_PERIOD_MS;
     while(true){
+
         TickType_t lastWakeTime = xTaskGetTickCount();
         bool btnState = ::digitalRead(BTN_PIN);
         if(!btnState && (btnState != lastBtn)){
@@ -228,11 +229,12 @@ void fastLedTask(void* param){
             }
         }
         lastBtn = btnState;
-        fxManager.draw(leds, audioReactive.getData());
+        lastSample = ::millis();
+        fxManager.draw(leds, audioReactive.getData());  //This draw takes 70ms????
+        FastLED.show();                                 //Takes 11 ms for full configuration
 
-        FastLED.show();
         //Try to keep a 50Hz update rate
-        vTaskDelayUntil(&lastWakeTime, updateRateMs);
+        xTaskDelayUntil(&lastWakeTime, updateRateMs);
     }
 }
 

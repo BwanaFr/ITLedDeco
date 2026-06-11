@@ -63,7 +63,11 @@ const AudioReactiveData* AudioReactive::process(AudioInput* input)
 
     //Performs beat detection
     result->beatDetected = beatDetector_.process(samples, count, result);
-
+    if(result->beatDetected){
+        result->lastBeat = ::millis();
+    }else{
+        result->lastBeat = results_[currentResult_].lastBeat;
+    }
     if(xSemaphoreTake(resultMutex_, portMAX_DELAY)){
         currentResult_ = nextResult;
         audioAvailable_ = true;
